@@ -3,7 +3,7 @@
 <a href = "https://en.wikipedia.org/wiki/C%2B%2B"><img src = "https://img.shields.io/badge/C++-blue?style=flat&label=Language"></a>
 <a href = "https://en.wikipedia.org/wiki/Direct2D"><img src = "https://img.shields.io/badge/Direct2D-purple?style=flat&label=Render"></a>
 <a href = "https://github.com/Coslly/EasyGUI.git"><img src = "https://img.shields.io/badge/Proto-orange?style=flat&label=Version"></a>
-<a href = "https://github.com/Coslly/EasyGUI/blob/main/EasyGUI/EasyGUI/EasyGUI_Direct2D.h"><img src = "https://img.shields.io/badge/EasyGUI_Direct2D-white?logo=github&label=Core"></a>
+<a href = "https://github.com/Coslly/EasyGUI/blob/main/EasyGUI/EasyGUI/EasyGUI_Direct2D.h"><img src = "https://img.shields.io/badge/EasyGUI.h-white?logo=github&label=Core"></a>
 
 A lightweight and high-performance GUI library based on Direct2D
 ## 😀Features
