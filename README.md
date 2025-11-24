@@ -1,4 +1,4 @@
-# 🤖EasyGUI for C++
+# 🤖EasyGUI
 
 <a href = "https://en.wikipedia.org/wiki/C%2B%2B"><img src = "https://img.shields.io/badge/build-C++-blue?style=flat&label=Language"></a>
 <a href = "https://en.wikipedia.org/wiki/Direct2D"><img src = "https://img.shields.io/badge/build-Direct2D-purple?style=flat&label=Render"></a>
