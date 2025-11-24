@@ -1,7 +1,7 @@
 # 🤖EasyGUI for C++
 
-<a href="https://en.wikipedia.org/wiki/C%2B%2B"><img src="https://img.shields.io/badge/build-C++-blue?style=flat&label=Language&logo=visualstudio&logoColor=%231082c3"></a>
-<a href = "https://github.com/Coslly/EasyGUI.git"><img src = "https://img.shields.io/badge/build-Proto-blue?style=flat&label=Version&logo=visualstudio&logoColor=%231082c3"></a>
+<a href = "https://en.wikipedia.org/wiki/C%2B%2B"><img src = "https://img.shields.io/badge/build-C++-blue?style=flat&label=Language"></a>
+<a href = "https://github.com/Coslly/EasyGUI.git"><img src = "https://img.shields.io/badge/build-Proto-orange?style=flat&label=Version"></a>
 
 A lightweight and high-performance GUI library based on Direct2D
 ## 😀Features
