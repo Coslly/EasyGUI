@@ -36,7 +36,7 @@ while (true)
     GUI_Variable.GUI_BackGround();//BackGround
 
     static EasyGUI_Direct2D::EasyGUI_Block Block;
-    GUI_Variable.GUI_Block(Block, 160, 30, 400, 300, "Test Block");//Block
+    GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block");//Block
 
     GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
     GUI_Variable.GUI_Button(Block, "Button", UI_Button);
@@ -60,7 +60,7 @@ while (true)
         GUI_Variable.GUI_BackGround();//BackGround
 
         static EasyGUI_Direct2D::EasyGUI_Block Block;
-        GUI_Variable.GUI_Block(Block, 160, 30, 400, 300, "Test Block");//Block
+        GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block");//Block
 
         GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
         GUI_Variable.GUI_Button(Block, "Button", UI_Button);
@@ -88,7 +88,7 @@ int main()
             GUI_Variable.GUI_BackGround();//BackGround
 
             static EasyGUI_Direct2D::EasyGUI_Block Block;
-            GUI_Variable.GUI_Block(Block, 160, 30, 400, 300, "Test Block");//Block
+            GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block");//Block
 
             GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
             GUI_Variable.GUI_Button(Block, "Button", UI_Button);
@@ -101,4 +101,4 @@ int main()
 ```
 ### - Finished Product
 
-![image](https://github.com/Coslly/EasyGUI/blob/main/Show/OverallCode1.png?raw=true)
+![image](https://github.com/Coslly/EasyGUI/blob/main/Show/OverallCode.png?raw=true)
