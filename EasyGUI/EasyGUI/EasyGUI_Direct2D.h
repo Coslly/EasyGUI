@@ -147,7 +147,6 @@ namespace EasyGUI_Direct2D
             const auto Delta = GET_WHEEL_DELTA_WPARAM(wParam);
             if (Delta > 0)keybd_event(VK_UP, 0, 0, 0); else if (Delta < 0)keybd_event(VK_DOWN, 0, 0, 0);
         }
-        return true;
         return DefWindowProc(Hwnd, Message, wParam, lParam);//定义回调函数的返回值
     }
     struct EasyGUI_Block { string Title; Vector2 Pos, Size; int ID, Line, Start; bool IsInBlock, IsInScrollArea; ID2D1BitmapRenderTarget* Target; };
@@ -174,26 +173,25 @@ namespace EasyGUI_Direct2D
         inline ID2D1HwndRenderTarget* CreateHWNDRenderTarget(HWND WindowHWND, Vector2 PaintSize, long CreateID) noexcept//创建单独渲染目标
         {
             static unordered_map<long, ID2D1HwndRenderTarget*> RenderTarget;
-            while (!RenderTarget[CreateID])
+            if (!RenderTarget[CreateID])
             {
                 ID2D1Factory* EasyGUI_RenderFactory{}; D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &EasyGUI_RenderFactory);
-                const auto CreateTargetState = EasyGUI_RenderFactory->CreateHwndRenderTarget(
+                EasyGUI_RenderFactory->CreateHwndRenderTarget(
                     D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_HARDWARE, D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED)),
                     D2D1::HwndRenderTargetProperties(WindowHWND, D2D1::SizeU(PaintSize.x, PaintSize.y), D2D1_PRESENT_OPTIONS_IMMEDIATELY), &RenderTarget[CreateID]);
                 EasyGUI_RenderFactory->Release();
-                if (RenderTarget[CreateID])//当创建成功时调整抗锯齿 防止崩溃
-                {
-                    RenderTarget[CreateID]->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED);
-                    RenderTarget[CreateID]->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);
-                    break;
-                }
+                RenderTarget[CreateID]->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED); RenderTarget[CreateID]->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);//抗锯齿设置
             }
             return RenderTarget[CreateID];
         }
         inline ID2D1BitmapRenderTarget* CreateBitmapRenderTarget(ID2D1RenderTarget* MainTarget, Vector2 PaintSize, long CreateID) noexcept//创建控件渲染目标
         {
             static unordered_map<long, ID2D1BitmapRenderTarget*> RenderBitMap;
-            if (!RenderBitMap[CreateID])MainTarget->CreateCompatibleRenderTarget(D2D1::SizeF(PaintSize.x, PaintSize.y), &RenderBitMap[CreateID]);
+            if (!RenderBitMap[CreateID])
+            {
+                MainTarget->CreateCompatibleRenderTarget(D2D1::SizeF(PaintSize.x, PaintSize.y), &RenderBitMap[CreateID]);
+                RenderBitMap[CreateID]->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED); RenderBitMap[CreateID]->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);//抗锯齿设置
+            }
             else {
                 const auto OldSize = RenderBitMap[CreateID]->GetSize();
                 if (OldSize.width != PaintSize.x || OldSize.height != PaintSize.y)
@@ -201,7 +199,6 @@ namespace EasyGUI_Direct2D
                     RenderBitMap[CreateID]->Release();
                     MainTarget->CreateCompatibleRenderTarget(D2D1::SizeF(PaintSize.x, PaintSize.y), &RenderBitMap[CreateID]);
                 }
-                RenderBitMap[CreateID]->SetAntialiasMode(D2D1_ANTIALIAS_MODE_ALIASED); RenderBitMap[CreateID]->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_DEFAULT);//抗锯齿设置
             }
             return RenderBitMap[CreateID];
         }
@@ -306,15 +303,14 @@ namespace EasyGUI_Direct2D
         //------------------------------------------------------------------------------------------------------------------------------
         EasyGUI(Vector2 WindowSize, string WindowTitle) noexcept//初始化EasyGUI
         {
-            const auto WindowName = wstring(WindowTitle.begin(), WindowTitle.end()).c_str();//窗口类名
-            WNDCLASS WindowClass{}; WindowClass.lpfnWndProc = EasyGUI_WindowProcess; WindowClass.hInstance = GetModuleHandle(0); WindowClass.lpszClassName = WindowName;//窗口注册类
+            const auto WindowName = wstring(WindowTitle.begin(), WindowTitle.end());//窗口类名
+            WNDCLASS WindowClass{}; WindowClass.lpfnWndProc = EasyGUI_WindowProcess; WindowClass.hInstance = GetModuleHandle(0); WindowClass.lpszClassName = WindowName.c_str(); RegisterClass(&WindowClass);//窗口注册类
             while (true)//防止创建失败
             {
-                RegisterClass(&WindowClass); EasyGUI_WindowHWND = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW, WindowName, WindowName, WS_POPUP, GetSystemMetrics(0) / 2 - WindowSize.x / 2, GetSystemMetrics(1) / 2 - WindowSize.y / 2, WindowSize.x, WindowSize.y, 0, 0, 0, 0); if (!EasyGUI_WindowHWND)continue;
-                RegisterClass(&WindowClass); EasyGUI_ControlWindowHWND = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW, WindowName, WindowName, WS_POPUP, 0, 0, 0, 0, EasyGUI_WindowHWND, 0, 0, 0);
+                EasyGUI_WindowHWND = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW, WindowName.c_str(), WindowName.c_str(), WS_POPUP, GetSystemMetrics(0) / 2 - WindowSize.x / 2, GetSystemMetrics(1) / 2 - WindowSize.y / 2, WindowSize.x, WindowSize.y, 0, 0, 0, 0); if (!EasyGUI_WindowHWND)continue;
+                EasyGUI_ControlWindowHWND = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW, WindowName.c_str(), WindowName.c_str(), WS_POPUP, 0, 0, 0, 0, EasyGUI_WindowHWND, 0, 0, 0);
                 //---------------------------------------------------------------------------------------------------
                 ShowWindow(EasyGUI_WindowHWND, SW_SHOW); SetForegroundWindow(EasyGUI_WindowHWND); UpdateWindow(EasyGUI_WindowHWND);//显示窗口
-                MSG Mes{}; if (GetMessage(&Mes, 0, 0, 0)) { TranslateMessage(&Mes); DispatchMessage(&Mes); }//防止窗口未响应
                 SetLayeredWindowAttributes(EasyGUI_WindowHWND, RGB(0, 0, 0), EasyGUI_Alpha, 2);//设置窗口透明度
                 MARGINS Margin{ -1 }; DwmExtendFrameIntoClientArea(EasyGUI_WindowHWND, &Margin);//设置窗口模糊化
                 //---------------------------------------------------------------------------------------------------Direct2D初始化
@@ -327,7 +323,7 @@ namespace EasyGUI_Direct2D
         {
             if (!State)
             {
-                MSG MSG{}; if (GetMessage(&MSG, 0, 0, 0)) { TranslateMessage(&MSG); DispatchMessage(&MSG); }//窗口消息循环
+                MSG MSG{}; while (PeekMessage(&MSG, 0, 0, 0, 1)) { TranslateMessage(&MSG); DispatchMessage(&MSG); }//窗口消息循环
                 InputState_IsWindShow = GetForegroundWindow() == EasyGUI_WindowHWND, InputState_InBlock = false;//重置控件冲突判断变量
                 GetCursorPos(&EasyGUI_MousePos); GetWindowRect(EasyGUI_WindowHWND, &EasyGUI_WindowPos); GetWindowRect(EasyGUI_ControlWindowHWND, &EasyGUI_ControlWindowPos);//刷新鼠标窗口坐标
                 if (InputState_ControlWindowShow && !(EasyGUI_MousePos.x > EasyGUI_ControlWindowPos.left && EasyGUI_MousePos.x < EasyGUI_ControlWindowPos.right && EasyGUI_MousePos.y > EasyGUI_ControlWindowPos.top && EasyGUI_MousePos.y < EasyGUI_ControlWindowPos.bottom) && (KeyEvent(VK_LBUTTON, true) || KeyEvent(VK_RBUTTON, true)))InputState_ControlWindowShow = false; if (!InputState_ControlWindowShow)ShowWindow(EasyGUI_ControlWindowHWND, 0);//保持控件窗口最前端
@@ -385,7 +381,7 @@ namespace EasyGUI_Direct2D
             SetWindowTextA(EasyGUI_WindowHWND, WindowTitle.c_str());
         }
         inline float Window_DrawFPS() noexcept { return (float)EasyGUI_DrawFPS; }//获取窗口绘制帧数
-        inline bool Window_AllowMove(int DrawDelay = 5) noexcept//允许拖动窗口 (在GUI循环线程内加入此函数不需要添加延时函数来降低占用)
+        inline bool Window_AllowMove(int DrawDelay = 10) noexcept//允许拖动窗口 (在GUI循环线程内加入此函数不需要添加延时函数来降低占用)
         {
             static bool AntiOff, SaveMousePos; static Vector2 OldPos;//按下时坐标
             if (GetForegroundWindow() == EasyGUI_WindowHWND || InputState_ControlWindowShow)//检测窗口是否在最前端
@@ -422,7 +418,7 @@ namespace EasyGUI_Direct2D
             }
             else if (StyleCode == 1)//彩色变色渐变条
             {
-                const auto AnimaSpeed = 3000;//渐变条变化速度
+                const auto AnimaSpeed = 3000.f;//渐变条变化速度
                 LineColor = {
                     (int)floor(sin(Tick / AnimaSpeed * 2 + 3) * 127 + 128),
                     (int)floor(sin(Tick / AnimaSpeed * 2 + 5) * 127 + 128),
@@ -439,7 +435,7 @@ namespace EasyGUI_Direct2D
             }
             else if (StyleCode == 2)//主题色渐变条
             {
-                const auto AnimaSpeed = 800;//渐变条变化速度
+                const auto AnimaSpeed = 600.f;//渐变条变化速度
                 const Vector3 Sins = { sin(Tick / AnimaSpeed), sin(Tick / AnimaSpeed + 1),sin(Tick / AnimaSpeed + 2) };
                 LineColor = {
                     (int)(Sins.z * EasyGUI_Color.r / 2 + EasyGUI_Color.r / 2),
@@ -1178,7 +1174,7 @@ namespace EasyGUI_Direct2D
             {
                 const auto ListHeight = LimitLine * 25 + 1, ScrollBarHeight = max(int(ListHeight * float(LimitLine) / LineStringSize), 10);
                 Render_GradientRect(Block.Target, ListPos.x + ListSize.x - 4, ListPos.y + 2, 2, ListHeight, { 10,10,10 }, EasyGUI_Color / 10, true);//滚动槽背景
-                Render_GradientRect(Block.Target, ListPos.x + ListSize.x - 4, ListPos.y + 2 + ((LineStringSize - LimitLine) > 0 ? float(StartLinePos[Block.ID + Block.Line]) / (LineStringSize - LimitLine) * (ListHeight - ScrollBarHeight) : 0.f), 2, ScrollBarHeight, EasyGUI_Color / 2, EasyGUI_Color / 5, true);//滚动条
+                Render_GradientRect(Block.Target, ListPos.x + ListSize.x - 4, ListPos.y + 2 + ((LineStringSize - LimitLine) > 0 ? float(StartLinePos[Block.ID + Block.Line]) / (LineStringSize - LimitLine) * (ListHeight - ScrollBarHeight) : 0.f), 2, ScrollBarHeight, EasyGUI_Color / 2, EasyGUI_Color / 3, true);//滚动条
             }
             Block.Line += LimitLine * 25 + 5;
         }
