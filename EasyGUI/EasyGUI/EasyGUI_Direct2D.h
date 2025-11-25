@@ -381,7 +381,7 @@ namespace EasyGUI_Direct2D
             SetWindowTextA(EasyGUI_WindowHWND, WindowTitle.c_str());
         }
         inline float Window_DrawFPS() noexcept { return (float)EasyGUI_DrawFPS; }//获取窗口绘制帧数
-        inline bool Window_AllowMove(int DrawDelay = 10) noexcept//允许拖动窗口 (在GUI循环线程内加入此函数不需要添加延时函数来降低占用)
+        inline bool Window_AllowMove(int DrawDelay = 3) noexcept//允许拖动窗口 (在GUI循环线程内加入此函数不需要添加延时函数来降低占用)
         {
             static bool AntiOff, SaveMousePos; static Vector2 OldPos;//按下时坐标
             if (GetForegroundWindow() == EasyGUI_WindowHWND || InputState_ControlWindowShow)//检测窗口是否在最前端
