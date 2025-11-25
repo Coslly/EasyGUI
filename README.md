@@ -59,7 +59,7 @@ static bool UI_Checkbox = false;
 static bool UI_Button = false;
 while (true)
 {
-    if (!GUI_Variable.Window_Move())
+    if (!GUI_Variable.Window_AllowMove())
     {
         GUI_Variable.Draw(0);//Begin Draw GUI
 
@@ -87,7 +87,7 @@ int main()
     static bool UI_Button = false;
     while (true)
     {
-        if (!GUI_Variable.Window_Move())
+        if (!GUI_Variable.Window_AllowMove())
         {
             GUI_Variable.Draw(0);//Begin Draw GUI
 
