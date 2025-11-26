@@ -34,7 +34,7 @@ int main()
                 GUI_Variable.GUI_Slider<int>(Block, "Slider int", 0, 10, UI_Slider_int);
                 GUI_Variable.GUI_Slider<float>(Block, "Slider float", 0, 10, UI_Slider_float);
                 GUI_Variable.GUI_Combobox(Block, { "Head","CSGO","Dick","Coke","Shoot","Combo" }, UI_Combobox);
-                GUI_Variable.GUI_MiniButton(Block, UI_Button_Small, 10);
+                GUI_Variable.GUI_MiniButton(Block, UI_Button_Small);
                 GUI_Variable.GUI_Button(Block, "Button", UI_Button);
                 static auto ButtonClick = 0; if (UI_Button || UI_Button_Small)ButtonClick++;
                 GUI_Variable.GUI_Text(Block, "Button hit: " + to_string(ButtonClick));
