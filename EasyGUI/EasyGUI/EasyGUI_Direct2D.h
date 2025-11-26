@@ -167,7 +167,7 @@ namespace EasyGUI_Direct2D
         bool InputState_IsWindShow, InputState_InBlock, InputState_IsSlider, InputState_IsMove, InputState_ControlWindowShow;//防止控件函数之间冲突的判断变量
         inline void MoveControlWindow(int X, int Y, int Width, int Height) noexcept//移动控件窗口位置
         {
-            SetLayeredWindowAttributes(EasyGUI_ControlWindowHWND, RGB(0, 0, 0), 255, LWA_ALPHA);
+            SetLayeredWindowAttributes(EasyGUI_ControlWindowHWND, 0, 255, LWA_ALPHA);
             MoveWindow(EasyGUI_ControlWindowHWND, X, Y, Width, Height, true);
             EasyGUI_ControlRenderTarget->EndDraw(); EasyGUI_ControlRenderTarget->Resize(D2D1::SizeU(Width, Height));
             ShowWindow(EasyGUI_ControlWindowHWND, SW_SHOW);
@@ -320,7 +320,7 @@ namespace EasyGUI_Direct2D
                 EasyGUI_ControlWindowHWND = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW, WindowName.c_str(), WindowName.c_str(), WS_POPUP, 0, 0, 0, 0, EasyGUI_WindowHWND, 0, 0, 0);
                 //---------------------------------------------------------------------------------------------------
                 ShowWindow(EasyGUI_WindowHWND, SW_SHOW); SetForegroundWindow(EasyGUI_WindowHWND); UpdateWindow(EasyGUI_WindowHWND);//显示窗口
-                SetLayeredWindowAttributes(EasyGUI_WindowHWND, RGB(0, 0, 0), EasyGUI_Alpha, LWA_ALPHA);//设置窗口透明度
+                SetLayeredWindowAttributes(EasyGUI_WindowHWND, 0, EasyGUI_Alpha, LWA_ALPHA);//设置窗口透明度
                 MARGINS Margin{ -1 }; DwmExtendFrameIntoClientArea(EasyGUI_WindowHWND, &Margin);//设置窗口模糊化
                 //---------------------------------------------------------------------------------------------------Direct2D初始化
                 EasyGUI_RenderTarget = CreateHWNDRenderTarget(EasyGUI_WindowHWND, WindowSize, -1);
@@ -381,8 +381,9 @@ namespace EasyGUI_Direct2D
         inline int Window_GetAlpha() noexcept { return EasyGUI_Alpha; }//获取窗口透明度
         inline void Window_SetAlpha(int WindowAlpha) noexcept//修改窗口透明度
         {
+            if (WindowAlpha < 10)WindowAlpha = 10;
             if (WindowAlpha == EasyGUI_Alpha)return; EasyGUI_Alpha = WindowAlpha;
-            SetLayeredWindowAttributes(EasyGUI_WindowHWND, RGB(0, 0, 0), WindowAlpha, LWA_ALPHA);
+            SetLayeredWindowAttributes(EasyGUI_WindowHWND, 0, WindowAlpha, LWA_ALPHA);
         }
         inline void Window_Show() noexcept//修改窗口为最前端
         {
