@@ -52,30 +52,6 @@ while (true)
     Sleep(1);
 }
 ```
-Window_Move() function
-```cpp
-//Variable
-static bool UI_Checkbox = false;
-static bool UI_Button = false;
-while (true)
-{
-    if (!GUI_Variable.Window_AllowMove())
-    {
-        GUI_Variable.Draw(0);//Begin Draw GUI
-
-        GUI_Variable.GUI_BackGround();//BackGround
-
-        static EasyGUI_Direct2D::EasyGUI_Block Block;
-        GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block");//Block
-
-        GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
-        GUI_Variable.GUI_Button(Block, "Button", UI_Button);
-
-        GUI_Variable.Draw(1);//End Draw GUI
-    }
-    //Sleep(1);//Do not need this
-}
-```
 ### - Overall Code (Example Code)
 ```cpp
 int main()
@@ -87,20 +63,16 @@ int main()
     static bool UI_Button = false;
     while (true)
     {
-        if (!GUI_Variable.Window_AllowMove())
-        {
-            GUI_Variable.Draw(0);//Begin Draw GUI
+        GUI_Variable.Draw(0);//Begin Draw GUI
 
-            GUI_Variable.GUI_BackGround();//BackGround
+        GUI_Variable.GUI_BackGround();//BackGround
 
-            static EasyGUI_Direct2D::EasyGUI_Block Block;
-            GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block");//Block
+        static EasyGUI_Direct2D::EasyGUI_Block Block;
+        GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block");//Block
+        GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
+        GUI_Variable.GUI_Button(Block, "Button", UI_Button);
 
-            GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
-            GUI_Variable.GUI_Button(Block, "Button", UI_Button);
-
-            GUI_Variable.Draw(1);//End Draw GUI
-        }
+        GUI_Variable.Draw(1);//End Draw GUI
         //Sleep(1);//Do not need this
     }
 }
