@@ -3,6 +3,7 @@
 #include <String>
 #include <Chrono>
 #include <Unordered_map>
+#include <Algorithm>
 #include <Dwmapi.h>
 #include <Dwrite.h>
 #include <D2D1.h>
@@ -46,12 +47,6 @@ namespace EasyGUI_Direct2D
                 if (y > ReturnValue[key].y)ReturnValue[key].y += (y - ReturnValue[key].y) / speed; else if (y < ReturnValue[key].y)ReturnValue[key].y -= (ReturnValue[key].y - y) / speed;
                 return ReturnValue[key];
             }
-            template<class CreateClassName> inline bool ChangeState(float threshold = 0) const noexcept//检测值是否变化
-            {
-                static auto Old_Value = *this; if (threshold == -1) { Old_Value = *this; return false; }
-                if (abs(Old_Value.x - x) > threshold || abs(Old_Value.y - y) > threshold) { Old_Value = *this; return true; }
-                return false;
-            }
         };
         struct Vector3//用来储存坐标数据 XYZ
         {
@@ -75,7 +70,7 @@ namespace EasyGUI_Direct2D
             inline Vector3 operator*=(double other) noexcept { x *= other, y *= other, z *= other; return *this; }
             inline Vector3 operator/=(double other) noexcept { x /= other, y /= other, z /= other; return *this; }
             inline bool IsZero() const noexcept { return !x && !y && !z; }//判断是否为0
-            inline int ID() const noexcept { return (static_cast<int>(z) << 20) | ((static_cast<int>(y) & 0x3FF) << 10) | (static_cast<int>(x) & 0x3FF); }//获取坐标唯一ID
+            inline int ID() const noexcept { return ((int)z << 20) | (((int)y & 0x3FF) << 10) | ((int)x & 0x3FF); }//获取坐标唯一ID
             inline Vector3 ToAngle() const noexcept { return Vector3{ atan2(-z, hypot(x, y)) * (180 / (float)acos(-1)),atan2(y, x) * (180 / (float)acos(-1)) }; }
             inline Vector3 Normalize() const noexcept { const auto len = sqrt(x * x + y * y + z * z); if (!len)return {}; return { x / len, y / len, z / len }; }//归一化向量
             template<class CreateClassName> inline Vector3 Animation(float speed = 10, long key = 0) const noexcept//Vector3坐标动画
@@ -86,12 +81,6 @@ namespace EasyGUI_Direct2D
                 if (y > ReturnValue[key].y)ReturnValue[key].y += (y - ReturnValue[key].y) / speed; else if (y < ReturnValue[key].y)ReturnValue[key].y -= (ReturnValue[key].y - y) / speed;
                 if (z > ReturnValue[key].z)ReturnValue[key].z += (z - ReturnValue[key].z) / speed; else if (z < ReturnValue[key].z)ReturnValue[key].z -= (ReturnValue[key].z - z) / speed;
                 return ReturnValue[key];
-            }
-            template<class CreateClassName> inline bool ChangeState(float threshold = 0) const noexcept//检测值是否变化
-            {
-                static auto Old_Value = *this; if (threshold == -1) { Old_Value = *this; return false; }
-                if (abs(Old_Value.x - x) > threshold || abs(Old_Value.y - y) > threshold || abs(Old_Value.z - z) > threshold) { Old_Value = *this; return true; }
-                return false;
             }
         };
         struct Vector4//用来储存颜色数据 RGBA
@@ -111,49 +100,33 @@ namespace EasyGUI_Direct2D
             inline Vector4 operator/(double other) const noexcept { return Vector4{ (int)(r / other), (int)(g / other), (int)(b / other), a }; }
             inline bool IsZero() const noexcept { return !r && !g && !b; }//判断是否为0
             inline int ID() const noexcept { return (a << 24) | ((b & 0xFF) << 16) | ((g & 0xFF) << 8) | (r & 0xFF); }//获取颜色唯一ID
-            inline Vector4 Alpha(int alpha) const noexcept { if (alpha < 0)alpha = 0; if (alpha > 255)alpha = 255; return { r,g,b,alpha }; }//原有基础上设置特定透明度
-            inline Vector4 Limit() noexcept//限制颜色值过量 (0~255)
+            inline Vector4 Alpha(int alpha) const noexcept { return { r, g, b, clamp(alpha, 0, 255) }; }//原基础上修改透明度
+            inline Vector4 Reverse() const noexcept { return Vector4{ 255 - r, 255 - g, 255 - b, a }; }//反色
+            inline Vector4 Limit() noexcept { r = clamp(r, 0, 255); g = clamp(g, 0, 255); b = clamp(b, 0, 255); a = clamp(a, 0, 255); return *this; }//限制颜色值过量 (0~255)
+            inline Vector4 Min_Bri(int bright = 0) const noexcept { return Vector4{ max(r, bright),max(g, bright),max(b, bright),a }; }//最小亮度
+            inline Vector4 Max_Bri(int bright = 0) const noexcept { return Vector4{ min(r, bright),min(g, bright),min(b, bright),a }; }//最大亮度
+            inline Vector4 Sat(float saturation = 1.f, float grey = 0.f) const noexcept
             {
-                if (r < 0)r = 0; else if (r > 255)r = 255;
-                if (g < 0)g = 0; else if (g > 255)g = 255;
-                if (b < 0)b = 0; else if (b > 255)b = 255;
-                if (a < 0)a = 0; else if (a > 255)a = 255;
-                return *this;
-            }
-            inline Vector4 Min_Bri(int bright = 0) const noexcept//最小亮度
-            {
-                auto Color_Var = *this;
-                if (Color_Var.r < bright)Color_Var.r = bright;
-                if (Color_Var.g < bright)Color_Var.g = bright;
-                if (Color_Var.b < bright)Color_Var.b = bright;
-                return Color_Var;
-            }
-            inline Vector4 Max_Bri(int bright = 0) const noexcept//最大亮度
-            {
-                auto Color_Var = *this;
-                if (Color_Var.r > bright)Color_Var.r = bright;
-                if (Color_Var.g > bright)Color_Var.g = bright;
-                if (Color_Var.b > bright)Color_Var.b = bright;
-                return Color_Var;
-            }
-            inline Vector4 Sat(float saturation = 1, float grey = 0, float brightness = 1) const noexcept//色调设置
-            {
-                float rNorm = r / 255.f, gNorm = g / 255.f, bNorm = b / 255.f, max_val = max(rNorm, max(gNorm, bNorm)), min_val = min(rNorm, min(gNorm, bNorm)), delta = max_val - min_val, h = 0, s = 0, v = max_val + grey; if (v > 1)v = 1;
-                if (delta == 0)h = 0; else if (max_val == rNorm) h = 60 * (((gNorm - bNorm) / delta) + (gNorm < bNorm ? 6 : 0));
-                else if (max_val == gNorm)h = 60 * (((bNorm - rNorm) / delta) + 2); else h = 60 * (((rNorm - gNorm) / delta) + 4);
-                s = (max_val == 0) ? 0 : (delta / max_val); s *= saturation / 1; if (s < 0)s = 0; else if (s > 1)s = 1;
-                int i = static_cast<int>(h / 60) % 6;
-                float f = h / 60 - i, p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s), newR = 0, newG = 0, newB = 0;
-                switch (i)
+                static constexpr float inv255 = 1.f / 255.f;
+                const float fr = r * inv255, fg = g * inv255, fb = b * inv255;
+                const float max_v = max(fr, max(fg, fb)), delta = max_v - min(fr, min(fg, fb));
+                float h_div = 0.f;
+                if (delta > 0.f)
                 {
-                case 0: newR = v; newG = t; newB = p; break;
-                case 1: newR = q; newG = v; newB = p; break;
-                case 2: newR = p; newG = v; newB = t; break;
-                case 3: newR = p; newG = q; newB = v; break;
-                case 4: newR = t; newG = p; newB = v; break;
-                case 5: newR = v; newG = p; newB = q; break;
+                    if (max_v == fr)h_div = (fg - fb) / delta + (fg < fb ? 6.f : 0.f);
+                    else if (max_v == fg)h_div = (fb - fr) / delta + 2.f;
+                    else h_div = (fr - fg) / delta + 4.f;
                 }
-                return Vector4{ (int)(newR * 255 * brightness) ,(int)(newG * 255 * brightness) ,(int)(newB * 255 * brightness), (*this).a };
+                const float s = clamp(((max_v <= 0.f) ? 0.f : (delta / max_v)) * saturation, 0.f, 1.f), v = clamp(max_v + grey, 0.f, 1.f);
+                float nr, ng, nb;
+                const float f = h_div - (int)h_div, p = v * (1.f - s), q = v * (1.f - s * f), t = v * (1.f - s * (1.f - f));
+                switch ((int)h_div % 6)
+                {
+                case 0: nr = v; ng = t; nb = p; break; case 1: nr = q; ng = v; nb = p; break;
+                case 2: nr = p; ng = v; nb = t; break; case 3: nr = p; ng = q; nb = v; break;
+                case 4: nr = t; ng = p; nb = v; break; default:nr = v; ng = p; nb = q; break;
+                }
+                return Vector4{ (int)(nr * 255.f),(int)(ng * 255.f),(int)(nb * 255.f),this->a };
             }
             template<class CreateClassName> inline Vector4 Animation(float speed = 10, long key = 0) const noexcept//Vector4颜色动画
             {
@@ -164,12 +137,6 @@ namespace EasyGUI_Direct2D
                 if (b > ReturnValue[key].b)ReturnValue[key].b += (b - ReturnValue[key].b) / speed; else if (b < ReturnValue[key].b)ReturnValue[key].b -= (ReturnValue[key].b - b) / speed;
                 if (a > ReturnValue[key].a)ReturnValue[key].a += (a - ReturnValue[key].a) / speed; else if (a < ReturnValue[key].a)ReturnValue[key].a -= (ReturnValue[key].a - a) / speed;
                 return ReturnValue[key];
-            }
-            template<class CreateClassName> inline bool ChangeState(float threshold = 0) const noexcept//检测值是否变化
-            {
-                static auto Old_Value = *this; if (threshold == -1) { Old_Value = *this; return false; }
-                if (abs(Old_Value.r - r) > threshold || abs(Old_Value.g - g) > threshold || abs(Old_Value.b - b) > threshold || abs(Old_Value.a - a) > threshold) { Old_Value = *this; return true; }
-                return false;
             }
         };
     }
@@ -201,11 +168,11 @@ namespace EasyGUI_Direct2D
         float EasyGUI_ColorSat = 0.8, EasyGUI_ColorGrey = 0.03;//主题色调
         double EasyGUI_DrawFPS, EasyGUI_DrawFrame;//绘制帧数
         bool InputState_IsWindShow, InputState_InBlock, InputState_IsSlider = false, InputState_ControlWindowShow = false;//防止控件函数之间冲突的判断变量
-        template<class CLASS> inline void SafeRelease(CLASS*& Point) noexcept { if (Point) { Point->Release(); Point = nullptr; } }//安全释放
+        template<class CLASS> inline void SafeRelease(CLASS*& Point) noexcept { if (Point) { Point->Release(); Point = 0; } }//安全释放
         inline void MoveControlWindow(int X, int Y, int Width, int Height, int Alpha = 0) noexcept//移动控件窗口位置
         {
             if (!Alpha)Alpha = EasyGUI_Alpha; SetLayeredWindowAttributes(EasyGUI_ControlWindowHWND, 0, Alpha, LWA_ALPHA);
-            if (Y + Height > GetSystemMetrics(1))Y = GetSystemMetrics(1) - Height - 10;//防止超出屏幕底部
+            if (X + Width > GetSystemMetrics(0))X = GetSystemMetrics(0) - Width - 10; if (Y + Height > GetSystemMetrics(1))Y = GetSystemMetrics(1) - Height - 10;//防止超出屏幕
             MoveWindow(EasyGUI_ControlWindowHWND, X, Y, Width, Height, true);
             EasyGUI_ControlRenderTarget->EndDraw(); EasyGUI_ControlRenderTarget->Resize(D2D1::SizeU(Width, Height));
             ShowWindow(EasyGUI_ControlWindowHWND, SW_SHOW);
@@ -233,7 +200,7 @@ namespace EasyGUI_Direct2D
             }
             return RenderBitMap[CreateID];
         }
-        inline D2D1::ColorF D2DCol(const Vector4& Color = { 0,0,0,0 }) noexcept { return D2D1::ColorF((float)Color.r / 255, (float)Color.g / 255, (float)Color.b / 255, (float)Color.a / 255); };//颜色转换
+        inline D2D1::ColorF D2DCol(const Vector4& Color = { 0,0,0,0 }) noexcept { return D2D1::ColorF((float)Color.r / 255.f, (float)Color.g / 255.f, (float)Color.b / 255.f, (float)Color.a / 255.f); };//颜色转换
         inline bool KeyEvent(int VK_CODE, bool Release = false) noexcept//检测按键是否被按下 (后者参数为按下后是否立马释放)
         {
             if (InputState_IsSlider && Release)return false;//滑条滑动时阻止按键释放
@@ -295,6 +262,7 @@ namespace EasyGUI_Direct2D
         inline Vector2 Render_String(ID2D1RenderTarget* Target, int X, int Y, string String, Vector4 Color, const string& FontName, float FontSize, int FontWeight = 400, Vector2 StringLimit = { 0,0 }) noexcept//绘制文字
         {
             if (String.empty() || FontSize <= 0 || Color.a < 10)return {};
+            replace(String.begin(), String.end(), '\n', ' '); replace(String.begin(), String.end(), '\r', ' ');
             int CodePage = 0, NoShadow = 0;//转义符号判断变量
             if (String.find("<") != string::npos)//当有转义符号
             {
@@ -362,7 +330,7 @@ namespace EasyGUI_Direct2D
             return { (int)Metrics.width,(int)Metrics.height };
         }
         //------------------------------------------------------------------------------------------------------------------------------
-        EasyGUI(Vector2 WindowSize = { 0,0 }, string WindowTitle = "EasyGUI") noexcept//初始化EasyGUI
+        EasyGUI(string WindowTitle = "EasyGUI", Vector2 WindowSize = { 0,0 }) noexcept//初始化EasyGUI
         {
             if (WindowSize.IsZero())return;//兼容无值初始化
             const auto WindowName = wstring(WindowTitle.begin(), WindowTitle.end());//窗口类名
@@ -395,11 +363,10 @@ namespace EasyGUI_Direct2D
                 EasyGUI_RenderTarget->Clear(D2DCol()); EasyGUI_ControlRenderTarget->Clear(D2DCol());//清空绘制内容
             }
             else {
-                //Render_String(EasyGUI_RenderTarget, 5, 5, "FPS: " + to_string(EasyGUI_DrawFPS), { 255,0,0 }, "Verdana", 15);//绘制帧数
                 EasyGUI_RenderTarget->EndDraw(); EasyGUI_ControlRenderTarget->EndDraw();//结束绘制
                 const auto Tick = duration<double, milli>(steady_clock::now().time_since_epoch()).count(); EasyGUI_DrawFrame = Tick - EasyGUI_DrawFrame; if (EasyGUI_DrawFrame > 0)EasyGUI_DrawFPS = 1000.f / EasyGUI_DrawFrame; EasyGUI_DrawFrame = Tick;//计算绘制帧率
                 KeyEvent(VK_UP, true); KeyEvent(VK_DOWN, true);//释放按键消息
-                if (!InputState_IsSlider) { timeBeginPeriod(1); Sleep(6); timeEndPeriod(1); }//降低硬件占用
+                if (!(InputState_IsSlider && InputState_IsWindShow)) { timeBeginPeriod(1); Sleep(6); timeEndPeriod(1); }//降低硬件占用
             }
         }
         inline void Release() noexcept//释放全部资源
@@ -415,9 +382,9 @@ namespace EasyGUI_Direct2D
         inline void Style_SetFontSize(float FontSize) noexcept { if (!FontSize)EasyGUI_FontSize = 11; else EasyGUI_FontSize = FontSize; }//设置全局字体大小
         inline Vector4 Style_GetColor() noexcept { return EasyGUI_Color; }//获取全局主题颜色
         inline void Style_SetColor(Vector4 MainColor) noexcept { EasyGUI_Color = MainColor.Alpha(255); }//设置全局主题颜色
-        int Style_GetClickSound() noexcept { return EasyGUI_ClickSound; }//获取全局点击音效
-        void Style_SetClickSound(int Tone) noexcept { EasyGUI_ClickSound = Tone; }//设置全局点击音效
-        void Style_SetColorHue(float Sat = -1, float Grey = -1) noexcept { if (Sat >= 0)EasyGUI_ColorSat = Sat; if (Grey >= 0)EasyGUI_ColorGrey = Grey; }//设置全局主题色调
+        inline int Style_GetClickSound() noexcept { return EasyGUI_ClickSound; }//获取全局点击音效
+        inline void Style_SetClickSound(int Tone) noexcept { EasyGUI_ClickSound = Tone; }//设置全局点击音效
+        inline void Style_SetColorHue(float Sat = -1, float Grey = -1) noexcept { if (Sat >= 0)EasyGUI_ColorSat = Sat; if (Grey >= 0)EasyGUI_ColorGrey = Grey; }//设置全局主题色调
         //------------------------------------------------------------------------------------------------------------------------------
         inline HWND Window_HWND() noexcept { return EasyGUI_WindowHWND; }//获取窗口HWND
         inline Vector2 Window_GetPos() noexcept//获取窗口坐标
@@ -928,19 +895,18 @@ namespace EasyGUI_Direct2D
                 }
                 if (IsInput[Block.ID + Block.Line])//在输入状态时
                 {
-                    string PressedKey = "";//按键记录变量
                     if (KeyEvent(VK_LCONTROL) || KeyEvent(VK_RCONTROL))//Ctrl键脚本
                     {
-                        if (KeyEvent('C', true) && OpenClipboard(0))//Ctrl + C 复制
+                        OpenClipboard(0);//打开剪切板
+                        if (KeyEvent('C', true))//Ctrl + C 复制
                         {
                             EmptyClipboard();//清空剪切板
-                            const auto hHandle = GlobalAlloc(GMEM_MOVEABLE, strlen(InputValue.c_str()) + 1);//分配内存
-                            strcpy_s((char*)GlobalLock(hHandle), strlen(InputValue.c_str()) + 1, InputValue.c_str());
+                            const auto hHandle = GlobalAlloc(GMEM_MOVEABLE, InputValue.size() + 1);//分配内存
+                            strcpy_s((char*)GlobalLock(hHandle), InputValue.size() + 1, InputValue.c_str());
                             SetClipboardData(CF_TEXT, hHandle);//设置剪切板数据
                             GlobalUnlock(hHandle);//解除锁定
-                            CloseClipboard();//关闭剪切板
                         }
-                        if (KeyEvent('V', true) && OpenClipboard(0))//Ctrl + V 粘贴
+                        if (KeyEvent('V', true))//Ctrl + V 粘贴
                         {
                             if (IsClipboardFormatAvailable(CF_TEXT))
                             {
@@ -948,8 +914,8 @@ namespace EasyGUI_Direct2D
                                 InputValue += ((char*)GlobalLock(c_data));//在字符串尾部粘贴字符串内容
                                 GlobalUnlock(c_data);//解除锁定
                             }
-                            CloseClipboard();//关闭剪切板
                         }
+                        CloseClipboard();//关闭剪切板
                     }
                     else {//不阻止Ctrl脚本事件
                         const auto Is_Toupper = KeyEvent(VK_SHIFT) || KeyEvent(VK_LSHIFT) || KeyEvent(VK_RSHIFT) || GetKeyState(0x14);//大写按键脚本
@@ -957,6 +923,7 @@ namespace EasyGUI_Direct2D
                         {
                             if (i != VK_SHIFT && i != VK_LSHIFT && i != VK_RSHIFT && KeyEvent(i, true))
                             {
+                                string PressedKey = "";//按键记录变量
                                 switch (i)//相比if函数执行更快
                                 {
                                 case 0x20:PressedKey = " "; break;

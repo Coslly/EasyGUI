@@ -3,7 +3,7 @@ int main()
 {
     ShowWindow(GetConsoleWindow(), true);//Show Console Window
     system("cls"); printf("EasyGUI - Direct2D\nA lightweight and high-performance GUI library based on Direct2D\nGithub: https://github.com/Coslly/EasyGUI.git\n");
-    EasyGUI_Direct2D::EasyGUI GUI_Variable = { {790, 360}, "EasyGUI Test Windows" };//Initialize GUI variables
+    EasyGUI_Direct2D::EasyGUI GUI_Variable = { "EasyGUI - Direct2D",{790, 360} };//Initialize GUI variables
     while (true)
     {
         static bool UI_Checkbox = false;
