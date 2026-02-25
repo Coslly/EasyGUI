@@ -56,7 +56,7 @@ while (true)
 ```cpp
 int main()
 {
-    EasyGUI_Direct2D::EasyGUI GUI_Variable = { "EasyGUI Test Windows", {500, 300} };//Initialize GUI variables
+    EasyGUI_Direct2D::EasyGUI GUI_Variable = { "EasyGUI Test Windows", {500, 300} };
 
     //Variable
     static bool UI_Checkbox = false;
