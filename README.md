@@ -25,7 +25,7 @@ Example file: `Main.cpp`
 ### - Initialization
 ```cpp
 //Initialize EasyGUI
-EasyGUI_Direct2D::EasyGUI GUI_Variable = { {590, 360}, "EasyGUI Test Windows" };
+EasyGUI_Direct2D::EasyGUI GUI_Variable = { "EasyGUI Test Windows", {590, 360} };
 ```
 ### - Add controls
 You need to add a control block.
@@ -56,7 +56,7 @@ while (true)
 ```cpp
 int main()
 {
-    EasyGUI_Direct2D::EasyGUI GUI_Variable = { {500, 300}, "EasyGUI Test Windows" };//Initialize GUI variables
+    EasyGUI_Direct2D::EasyGUI GUI_Variable = { "EasyGUI Test Windows", {500, 300} };//Initialize GUI variables
 
     //Variable
     static bool UI_Checkbox = false;
