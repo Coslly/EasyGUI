@@ -1,6 +1,7 @@
 # 🤖EasyGUI
 
-<a href = "https://en.wikipedia.org/wiki/C%2B%2B"><img src = "https://img.shields.io/badge/C++-blue?style=flat&label=Language"></a>
+<a href="https://en.wikipedia.org/wiki/C%2B%2B"><img src="https://img.shields.io/badge/C++-00599C?style=flat&logo=c%2B%2B&logoColor=white"></a>
+<a href="https://visualstudio.microsoft.com/"><img src="https://img.shields.io/badge/Visual%20Studio-2022-5C2D91?style=flat&logo=visualstudio&logoColor=white"></a>
 <a href = "https://en.wikipedia.org/wiki/Direct2D"><img src = "https://img.shields.io/badge/Direct2D-purple?style=flat&label=Render"></a>
 <a href = "https://github.com/Coslly/EasyGUI.git"><img src = "https://img.shields.io/badge/Proto-orange?style=flat&label=Version"></a>
 <a href = "https://github.com/Coslly/EasyGUI/blob/main/EasyGUI/EasyGUI/EasyGUI_Direct2D.h"><img src = "https://img.shields.io/badge/EasyGUI.h-white?logo=github&label=Core"></a>
@@ -45,7 +46,7 @@ while (true)
     GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block");//Block
 
     GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
-    GUI_Variable.GUI_Button(Block, "Button", UI_Button);
+    UI_Button = GUI_Variable.GUI_Button(Block, "Button");
 
     GUI_Variable.Draw(1);//End Draw GUI
 
@@ -70,7 +71,7 @@ int main()
         static EasyGUI_Direct2D::EasyGUI_Block Block;
         GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block");//Block
         GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
-        GUI_Variable.GUI_Button(Block, "Button", UI_Button);
+        UI_Button = GUI_Variable.GUI_Button(Block, "Button");
 
         GUI_Variable.Draw(1);//End Draw GUI
         //Sleep(1);//Do not need this
