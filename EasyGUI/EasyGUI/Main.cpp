@@ -11,17 +11,17 @@ int main()
         static float UI_Slider_float = 5;
         static int UI_Combobox = 0;
         static bool UI_Button = false;
-        static bool UI_Button_Small = false;
+        static bool UI_MiniButton = false;
         static int UI_KeySelector = 4;
         static EasyGUI_Direct2D::Vector4 UI_ColorSelector = { 200,200,255,255 };
         static EasyGUI_Direct2D::Vector3 UI_PosSelector = { 0.23,100,1000 };
-        static int UI_PanelSelector = 0;
+        static int UI_RadioBlock = 0;
         static string UI_InputText = "Input text";
         static int UI_List = 0;
         GUI_Variable.Draw(0);//Begin draw
         GUI_Variable.GUI_BackGround();//BackGround
-        GUI_Variable.GUI_RadioBlock(30, 30, 100, 300, "Panel", { "Panel 1","Panel 2","Panel 3" }, UI_PanelSelector);
-        if (UI_PanelSelector == 0)//Panel 1 Paint
+        GUI_Variable.GUI_RadioBlock(30, 30, 100, 300, "Panel", { "Panel 1","Panel 2","Panel 3" }, UI_RadioBlock);
+        if (UI_RadioBlock == 0)//Panel 1 Paint
         {
             static EasyGUI_Direct2D::EasyGUI_Block Block;
             GUI_Variable.GUI_Block(Block, 160, 30, 600, 300, "Block");//Block
@@ -32,9 +32,9 @@ int main()
             GUI_Variable.GUI_Slider<int>(Block, "Slider int", 0, 10, UI_Slider_int);
             GUI_Variable.GUI_Slider<float>(Block, "Slider float", 0, 10, UI_Slider_float);
             GUI_Variable.GUI_Combobox(Block, { "Head","CSGO","Dick","Coke","Shoot","Combo" }, UI_Combobox);
-            GUI_Variable.GUI_MiniButton(Block, UI_Button_Small);
-            GUI_Variable.GUI_Button(Block, "Button", UI_Button);
-            static auto ButtonClick = 0; if (UI_Button || UI_Button_Small)ButtonClick++;
+            UI_MiniButton = GUI_Variable.GUI_MiniButton(Block);
+            UI_Button = GUI_Variable.GUI_Button(Block, "Button");
+            static auto ButtonClick = 0; if (UI_MiniButton || UI_Button)ButtonClick++;
             GUI_Variable.GUI_Text(Block, "Button hit: " + to_string(ButtonClick));
             GUI_Variable.GUI_ColorSelector(Block, UI_ColorSelector);
             GUI_Variable.Style_SetColor(UI_ColorSelector);
@@ -44,7 +44,7 @@ int main()
             GUI_Variable.GUI_Text(Block, "Pos selector");
             GUI_Variable.GUI_Text(Block, "Window FPS: " + to_string(GUI_Variable.Window_DrawFPS()));
         }
-        else if (UI_PanelSelector == 1)//Panel 2 Paint
+        else if (UI_RadioBlock == 1)//Panel 2 Paint
         {
             static EasyGUI_Direct2D::EasyGUI_Block Block;
             GUI_Variable.GUI_Block(Block, 160, 30, 600, 300, "Block");//Block
