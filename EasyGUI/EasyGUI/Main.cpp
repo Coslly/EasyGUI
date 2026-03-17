@@ -1,4 +1,4 @@
-﻿#include "EasyGUI_Direct2D.h"
+#include "EasyGUI_Direct2D.h"
 int main()
 {
     ShowWindow(GetConsoleWindow(), true);//Show Console Window
@@ -16,7 +16,7 @@ int main()
         static EasyGUI_Direct2D::Vector4 UI_ColorSelector = { 200,200,255,255 };
         static EasyGUI_Direct2D::Vector3 UI_PosSelector = { 0.23,100,1000 };
         static int UI_RadioBlock = 0;
-        static string UI_InputText = "Input text";
+        static std::string UI_InputText = "Input text";
         static int UI_List = 0;
         GUI_Variable.Draw(0);//Begin draw
         GUI_Variable.GUI_BackGround();//BackGround
@@ -28,21 +28,21 @@ int main()
             GUI_Variable.GUI_Tip(Block, "Some tips");
             GUI_Variable.GUI_KeySelector(Block, UI_KeySelector);
             GUI_Variable.GUI_Checkbox(Block, "This is a Checkbox", UI_Checkbox);
-            if (UI_Checkbox)for (int i = 0; i < 10; ++i)GUI_Variable.GUI_Text(Block, "This is Text " + to_string(i));
+            if (UI_Checkbox)for (int i = 0; i <= 20; ++i)GUI_Variable.GUI_Text(Block, "This is Text " + std::to_string(i));
             GUI_Variable.GUI_Slider<int>(Block, "Slider int", 0, 10, UI_Slider_int);
             GUI_Variable.GUI_Slider<float>(Block, "Slider float", 0, 10, UI_Slider_float);
             GUI_Variable.GUI_Combobox(Block, { "Head","CSGO","Dick","Coke","Shoot","Combo" }, UI_Combobox);
             UI_MiniButton = GUI_Variable.GUI_MiniButton(Block);
             UI_Button = GUI_Variable.GUI_Button(Block, "Button");
             static auto ButtonClick = 0; if (UI_MiniButton || UI_Button)ButtonClick++;
-            GUI_Variable.GUI_Text(Block, "Button hit: " + to_string(ButtonClick));
+            GUI_Variable.GUI_Text(Block, "Button hit: " + std::to_string(ButtonClick));
             GUI_Variable.GUI_ColorSelector(Block, UI_ColorSelector);
             GUI_Variable.Style_SetColor(UI_ColorSelector);
             GUI_Variable.Window_SetAlpha(UI_ColorSelector.a);
             GUI_Variable.GUI_Text(Block, "Main color");
             GUI_Variable.GUI_PosSelector(Block, UI_PosSelector);
             GUI_Variable.GUI_Text(Block, "Pos selector");
-            GUI_Variable.GUI_Text(Block, "Window FPS: " + to_string(GUI_Variable.Window_DrawFPS()));
+            GUI_Variable.GUI_Text(Block, "Window FPS: " + std::to_string(GUI_Variable.Window_DrawFPS()));
         }
         else if (UI_RadioBlock == 1)//Panel 2 Paint
         {
