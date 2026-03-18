@@ -78,7 +78,7 @@ namespace EasyGUI_Direct2D
             inline Vector4 operator*(double other) const noexcept { return Vector4{ (int)(r * other), (int)(g * other), (int)(b * other), a }; }
             inline Vector4 operator/(double other) const noexcept { return Vector4{ (int)(r / other), (int)(g / other), (int)(b / other), a }; }
             inline bool IsZero() const noexcept { return !r && !g && !b; }
-            inline uint64_t Pack(int Step = 5) const noexcept { return (uint64_t(r / Step) << 24) | (uint64_t(g / Step) << 16) | (uint64_t(b / Step) << 8) | uint64_t(a / Step); }
+            inline uint64_t Pack(int Step = 4) const noexcept { return (uint64_t(r / Step) << 24) | (uint64_t(g / Step) << 16) | (uint64_t(b / Step) << 8) | uint64_t(a / Step); }
             inline Vector4 Alpha(int alpha) const noexcept { return { r, g, b, std::clamp(alpha, 0, 255) }; }
             inline Vector4 Reverse() const noexcept { return Vector4{ 255 - r, 255 - g, 255 - b, a }; }
             inline Vector4 Limit() noexcept { r = std::clamp(r, 0, 255); g = std::clamp(g, 0, 255); b = std::clamp(b, 0, 255); a = std::clamp(a, 0, 255); return *this; }
@@ -352,7 +352,7 @@ namespace EasyGUI_Direct2D
                 EasyGUI_RenderTarget->Clear(D2DCol()); EasyGUI_ControlRenderTarget->Clear(D2DCol());//清空绘制内容
             }
             else {
-                //Render_String(EasyGUI_RenderTarget, 5, 5, "FPS: " + to_string(EasyGUI_DrawFPS), { 255,0,0 }, "Verdana", 15);//绘制帧数
+                //Render_String(EasyGUI_RenderTarget, 5, 5, "FPS: " + std::to_string(EasyGUI_DrawFPS), { 255,0,0 }, "Verdana", 15);//绘制帧数
                 EasyGUI_RenderTarget->EndDraw(); EasyGUI_ControlRenderTarget->EndDraw();//结束绘制
                 EasyGUI_Tick = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count();//获取当前滴答值
                 EasyGUI_DrawFrame = EasyGUI_Tick - EasyGUI_DrawFrame; if (EasyGUI_DrawFrame > 0)EasyGUI_DrawFPS = 1000.f / EasyGUI_DrawFrame; EasyGUI_DrawFrame = EasyGUI_Tick;//计算绘制帧率
