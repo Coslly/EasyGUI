@@ -1,4 +1,4 @@
-#include "EasyGUI_Direct2D.h"
+﻿#include "EasyGUI_Direct2D.h"
 int main()
 {
     ShowWindow(GetConsoleWindow(), true);//Show Console Window

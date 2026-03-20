@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <Vector>
 #include <String>
 #include <Chrono>
@@ -175,17 +175,17 @@ namespace EasyGUI_Direct2D
             }
             return RenderBitMap[CreateID];
         }
-        inline D2D1::ColorF D2DCol(const Vector4& Color = { 0,0,0,0 }) noexcept { return D2D1::ColorF((float)Color.r / 255.f, (float)Color.g / 255.f, (float)Color.b / 255.f, (float)Color.a / 255.f); };//颜色转换
+        inline D2D1::ColorF D2DCol(Vector4 Color) noexcept { Color = Color.Limit(); return D2D1::ColorF((float)Color.r / 255.f, (float)Color.g / 255.f, (float)Color.b / 255.f, (float)Color.a / 255.f); };//颜色转换
         inline ID2D1GradientStopCollection* CacheGradientStop(ID2D1RenderTarget* Target, const Vector4& Color_1, const Vector4& Color_2) noexcept//渐变色缓存
         {
             ID2D1GradientStopCollection* ReturnValue{};
-            const auto GraStopKey = (Color_1.Pack() << 32) | Color_2.Pack() ^ (int)Target;
+            const auto GraStopKey = ((Color_1.Pack() << 32) | Color_2.Pack()) ^ (int)Target;
             const auto Iterator = CacheGraStop.find(GraStopKey);
             if (Iterator != CacheGraStop.end())return Iterator->second;
             else {
                 const D2D1_GRADIENT_STOP GraStop[2] = { {0, D2DCol(Color_1)},{1, D2DCol(Color_2)} };
                 Target->CreateGradientStopCollection(GraStop, 2, D2D1_GAMMA_2_2, D2D1_EXTEND_MODE_CLAMP, &ReturnValue);
-                if (CacheGraStop.size() > 512)
+                if (CacheGraStop.size() > 256)
                 {
                     auto it = CacheGraStop.begin();
                     if (it->second)it->second->Release();
@@ -261,11 +261,17 @@ namespace EasyGUI_Direct2D
             {
                 if (String.find("<UTF>") != string::npos) { String.erase(String.find("<UTF>"), 5); CodePage = CP_UTF8; }//转换UTF-8
                 if (String.find("<NOSHADOW>") != string::npos) { String.erase(String.find("<NOSHADOW>"), 10); NoShadow = true; }//无阴影
-                if (String.find("<RED>") != string::npos) { String.erase(String.find("<RED>"), 5); Color = { 255,0,0 }; }
-                else if (String.find("<GREEN>") != string::npos) { String.erase(String.find("<GREEN>"), 7); Color = { 0,255,0 }; }
-                else if (String.find("<BLUE>") != string::npos) { String.erase(String.find("<BLUE>"), 6); Color = { 0,0,255 }; }
-                else if (String.find("<GREY>") != string::npos) { String.erase(String.find("<GREY>"), 6); Color = { 100,100,100 }; }
-                else if (String.find("<WHITE>") != string::npos) { String.erase(String.find("<WHITE>"), 7); Color = { 255,255,255 }; }
+                if (String.find("<COLOR>") != string::npos) { String.erase(String.find("<COLOR>"), 7); Color = EasyGUI_Color.Alpha(Color.a); }
+                else if (String.find("<RED>") != string::npos) { String.erase(String.find("<RED>"), 5); Color = { 255,0,0,Color.a }; }
+                else if (String.find("<GREEN>") != string::npos) { String.erase(String.find("<GREEN>"), 7); Color = { 0,255,0,Color.a }; }
+                else if (String.find("<BLUE>") != string::npos) { String.erase(String.find("<BLUE>"), 6); Color = { 0,0,255,Color.a }; }
+                else if (String.find("<YELLOW>") != string::npos) { String.erase(String.find("<YELLOW>"), 8); Color = { 255,255,0,Color.a }; }
+                else if (String.find("<GREY>") != string::npos) { String.erase(String.find("<GREY>"), 6); Color = { 100,100,100,Color.a }; }
+                else if (String.find("<WHITE>") != string::npos) { String.erase(String.find("<WHITE>"), 7); Color = { 255,255,255,Color.a }; }
+                else if (String.find("<RED_>") != string::npos) { String.erase(String.find("<RED_>"), 6); Color = { 255,150,150,Color.a }; }
+                else if (String.find("<YELLOW_>") != string::npos) { String.erase(String.find("<YELLOW_>"), 9); Color = { 200,200,150,Color.a }; }
+                else if (String.find("<GREEN_>") != string::npos) { String.erase(String.find("<GREEN_>"), 8); Color = { 150,255,150,Color.a }; }
+                if (String.find("<DIM>") != string::npos) { String.erase(String.find("<DIM>"), 5); Color = Color * 0.75f; }
             }
             Color = Color.Sat(EasyGUI_ColorSat, EasyGUI_ColorGrey);
             IDWriteTextFormat* TextFormat{}; IDWriteTextLayout* Layout{};
@@ -292,7 +298,22 @@ namespace EasyGUI_Direct2D
         }
         inline Vector2 Render_MiniString(ID2D1RenderTarget* Target, int X, int Y, string String, Vector4 Color, float FontSize = 10, int FontWeight = 600, Vector2 StringLimit = { 0,0 }) noexcept//绘制简单文字
         {
-            if (String.empty() || FontSize <= 0 || Color.a < 3)return {}; Color = Color.Sat(EasyGUI_ColorSat, EasyGUI_ColorGrey);
+            if (String.empty() || FontSize <= 0 || Color.a < 3)return {};
+            if (String.find("<") != string::npos)//当有转义符号
+            {
+                if (String.find("<COLOR>") != string::npos) { String.erase(String.find("<COLOR>"), 7); Color = EasyGUI_Color.Alpha(Color.a); }
+                else if (String.find("<RED>") != string::npos) { String.erase(String.find("<RED>"), 5); Color = { 255,0,0,Color.a }; }
+                else if (String.find("<GREEN>") != string::npos) { String.erase(String.find("<GREEN>"), 7); Color = { 0,255,0,Color.a }; }
+                else if (String.find("<BLUE>") != string::npos) { String.erase(String.find("<BLUE>"), 6); Color = { 0,0,255,Color.a }; }
+                else if (String.find("<YELLOW>") != string::npos) { String.erase(String.find("<YELLOW>"), 8); Color = { 255,255,0,Color.a }; }
+                else if (String.find("<GREY>") != string::npos) { String.erase(String.find("<GREY>"), 6); Color = { 100,100,100,Color.a }; }
+                else if (String.find("<WHITE>") != string::npos) { String.erase(String.find("<WHITE>"), 7); Color = { 255,255,255,Color.a }; }
+                else if (String.find("<RED_>") != string::npos) { String.erase(String.find("<RED_>"), 6); Color = { 255,150,150,Color.a }; }
+                else if (String.find("<YELLOW_>") != string::npos) { String.erase(String.find("<YELLOW_>"), 9); Color = { 200,200,150,Color.a }; }
+                else if (String.find("<GREEN_>") != string::npos) { String.erase(String.find("<GREEN_>"), 8); Color = { 150,255,150,Color.a }; }
+                if (String.find("<DIM>") != string::npos) { String.erase(String.find("<DIM>"), 5); Color = Color * 0.75f; }
+            }
+            Color = Color.Sat(EasyGUI_ColorSat, EasyGUI_ColorGrey);
             IDWriteTextFormat* TextFormat{}; IDWriteTextLayout* Layout{};
             WriteFactory->CreateTextFormat(L"Verdana", 0, (DWRITE_FONT_WEIGHT)FontWeight, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, FontSize, L"", &TextFormat);
             if (!TextFormat)return {};//防止字体过小时崩溃
@@ -349,10 +370,10 @@ namespace EasyGUI_Direct2D
                 if (InputState_ControlWindowShow && !(EasyGUI_MousePos.x > EasyGUI_ControlWindowPos.left && EasyGUI_MousePos.x < EasyGUI_ControlWindowPos.right && EasyGUI_MousePos.y > EasyGUI_ControlWindowPos.top && EasyGUI_MousePos.y < EasyGUI_ControlWindowPos.bottom) && (KeyEvent(VK_LBUTTON, true) || KeyEvent(VK_RBUTTON)))InputState_ControlWindowShow = false; if (!InputState_ControlWindowShow)ShowWindow(EasyGUI_ControlWindowHWND, SW_HIDE);//保持控件窗口最前端
                 EasyGUI_RenderTarget->Resize(D2D1::SizeU(EasyGUI_WindowPos.right - EasyGUI_WindowPos.left, EasyGUI_WindowPos.bottom - EasyGUI_WindowPos.top));//刷新画布大小
                 EasyGUI_RenderTarget->BeginDraw(); EasyGUI_ControlRenderTarget->BeginDraw();//开始绘制
-                EasyGUI_RenderTarget->Clear(D2DCol()); EasyGUI_ControlRenderTarget->Clear(D2DCol());//清空绘制内容
+                EasyGUI_RenderTarget->Clear(D2DCol({ 0,0,0,0 })); EasyGUI_ControlRenderTarget->Clear(D2DCol({ 0,0,0,0 }));//清空绘制内容
             }
             else {
-                //Render_String(EasyGUI_RenderTarget, 5, 5, "FPS: " + std::to_string(EasyGUI_DrawFPS), { 255,0,0 }, "Verdana", 15);//绘制帧数
+                //Render_String(EasyGUI_RenderTarget, 5, 5, "FPS: " + std::to_string(EasyGUI_DrawFPS), EasyGUI_Color.Alpha(255), "Verdana", 15);//绘制帧数
                 EasyGUI_RenderTarget->EndDraw(); EasyGUI_ControlRenderTarget->EndDraw();//结束绘制
                 EasyGUI_Tick = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count();//获取当前滴答值
                 EasyGUI_DrawFrame = EasyGUI_Tick - EasyGUI_DrawFrame; if (EasyGUI_DrawFrame > 0)EasyGUI_DrawFPS = 1000.f / EasyGUI_DrawFrame; EasyGUI_DrawFrame = EasyGUI_Tick;//计算绘制帧率
@@ -529,7 +550,7 @@ namespace EasyGUI_Direct2D
             Y += 2; Height -= 4;
             const auto PaintStartPos = Animation<class EasyGUI_Block_ScroolAni>(Block.Start, EasyGUI_AnimationSmooth * 0.7f, Block.ID);//滑动动画
             ID2D1Bitmap* BitMap{}; Block.Target->GetBitmap(&BitMap); EasyGUI_RenderTarget->DrawBitmap(BitMap, D2D1::RectF(X, Y, X + Width, Y + Height), 1, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1::RectF(0, PaintStartPos, Width, PaintStartPos + Height)); SafeRelease(BitMap);
-            Block.Target->BeginDraw(); Block.Target->Clear(D2DCol());
+            Block.Target->BeginDraw(); Block.Target->Clear(D2DCol({ 0,0,0,0 }));
             Y -= 2; Height += 4;
             Render_GradientRect(EasyGUI_RenderTarget, X + 2, Y + 2, Width - 4, 20, { 10,10,10,200 }, { 10,10,10,0 }, true);//顶部遮罩
             Render_GradientRect(EasyGUI_RenderTarget, X + 2, Y + Height - 20 - 2, Width - 4, 20, EasyGUI_Color.Alpha(0) / 10, EasyGUI_Color.Alpha(200) / 10, true);//底部遮罩
@@ -566,16 +587,16 @@ namespace EasyGUI_Direct2D
                 else Render_String(EasyGUI_RenderTarget, 10000 + X + Width / 2, 10000 + Y + 28 + 30 * i, BlockText[i], EasyGUI_Color.Min_Bri(180).Max_Bri(220) / 2, EasyGUI_Font, EasyGUI_FontSize + 2, 600);
             }
         }
-        inline int GUI_Text(EasyGUI_Block& Block, const string& Text, Vector4 TextColor = { 200,200,200 }) noexcept//行文字
+        inline int GUI_Text(EasyGUI_Block& Block, const string& Text) noexcept//行文字
         {
             //Render_Rect(Block.Target, 0, Block.Line, 9999, 1, { 255,0,0 });//Debug
-            const auto ReturnValue = Render_String(Block.Target, 45 + Block.Offset, 10000 + Block.Line, Text, TextColor, EasyGUI_Font, EasyGUI_FontSize); Block.Line += 25; return ReturnValue.x;
+            const auto ReturnValue = Render_String(Block.Target, 45 + Block.Offset, 10000 + Block.Line, Text, { 200,200,200 }, EasyGUI_Font, EasyGUI_FontSize); Block.Line += 25; return ReturnValue.x;
         }
         inline void GUI_Line(EasyGUI_Block& Block, int Y_Offset = 0) noexcept//分割线
         {
             Render_Rect(Block.Target, 25, Block.Line + Y_Offset, Block.Size.x - 50, 1, { 60,60,60 }); Block.Line += 20;
         }
-        inline void GUI_Checkbox(EasyGUI_Block& Block, const string& Text, bool& CheckboxValue, Vector4 TextColor = { 200,200,200 }) noexcept//单选框
+        inline void GUI_Checkbox(EasyGUI_Block& Block, const string& Text, bool& CheckboxValue) noexcept//单选框
         {
             const Vector2 CheckBoxPos = { 25 + Block.Offset, Block.Line - 5 }, CheckBoxSize = { 10,10 };
             const auto DetectMousePos = MouseJudgment(Block.Pos.x + CheckBoxPos.x, Block.Pos.y - Block.Start + CheckBoxPos.y, Render_String(Block.Target, 0, 0, Text, {}, EasyGUI_Font, EasyGUI_FontSize).x + CheckBoxSize.x + 15, CheckBoxSize.y);//窗口检测
@@ -584,7 +605,7 @@ namespace EasyGUI_Direct2D
             Render_GradientRect(Block.Target, CheckBoxPos.x + 1, CheckBoxPos.y + 1, CheckBoxSize.x - 2, CheckBoxSize.y - 2, EasyGUI_Color / Animation<class EasyGUI_Checkbox_DetMouAni>(DetectMousePos ? 3 : 4, EasyGUI_AnimationSmooth, Block.ID + Block.Line), { 25,25,25 }, true);
             const auto SelectAlpha = Animation<class EasyGUI_Checkbox_SelectAni>(CheckboxValue ? 255 : 0, EasyGUI_AnimationSmooth, Block.ID + Block.Line);
             Render_GradientRect(Block.Target, CheckBoxPos.x + 1, CheckBoxPos.y + 1, CheckBoxSize.x - 2, CheckBoxSize.y - 2, EasyGUI_Color.Alpha(SelectAlpha), (EasyGUI_Color / 5).Alpha(SelectAlpha), true);
-            Render_String(Block.Target, CheckBoxPos.x + 20, 10000 + Block.Line, Text, TextColor, EasyGUI_Font, EasyGUI_FontSize);
+            Render_String(Block.Target, CheckBoxPos.x + 20, 10000 + Block.Line, Text, { 200,200,200 }, EasyGUI_Font, EasyGUI_FontSize);
             Block.Line += 25;
         }
         inline bool GUI_Button(EasyGUI_Block& Block, const string& Text) noexcept//单击按钮
@@ -595,7 +616,7 @@ namespace EasyGUI_Direct2D
             const auto IsPressed = InputState_IsWindShow && Block.IsInBlock && DetectMousePos && KeyEvent(VK_LBUTTON, true);//是否按下按钮
             Render_Rect(Block.Target, ButtonPos.x, ButtonPos.y, ButtonSize.x, ButtonSize.y, { 0,0,0 });
             Render_Rect(Block.Target, ButtonPos.x + 1, ButtonPos.y + 1, ButtonSize.x - 2, ButtonSize.y - 2, { 60,60,60 });
-            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / Animation<class EasyGUI_Button_DetMouAni>(DetectMousePos ? 6 : 7, EasyGUI_AnimationSmooth, Block.ID + Block.Line), { 20,20,20 }, true);
+            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / Animation<class EasyGUI_Button_DetMouAni>(DetectMousePos ? 6 : 8, EasyGUI_AnimationSmooth, Block.ID + Block.Line), { 20,20,20 }, true);
             Render_Rect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color.Alpha(Animation<class EasyGUI_Button_PressEffAni>(IsPressed ? 40 : 0, IsPressed ? 0 : EasyGUI_AnimationSmooth * 1.5f, Block.ID + Block.Line)));//按下动画
             Render_String(Block.Target, 10000 + ButtonPos.x + ButtonSize.x / 2, 10000 + Block.Line, Text, { 180,180,180 }, EasyGUI_Font, EasyGUI_FontSize, 600);
             Block.Line += 26;
@@ -615,7 +636,7 @@ namespace EasyGUI_Direct2D
             else PressTime[Block.ID + Block.Line] = 0;//重置计时器
             Render_Rect(Block.Target, ButtonPos.x, ButtonPos.y, ButtonSize.x, ButtonSize.y, { 0,0,0 });
             Render_Rect(Block.Target, ButtonPos.x + 1, ButtonPos.y + 1, ButtonSize.x - 2, ButtonSize.y - 2, { 60,60,60 });
-            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / Animation<class EasyGUI_LongPressButton_DetMouAni>(DetectMousePos ? 6 : 7, EasyGUI_AnimationSmooth, Block.ID + Block.Line), { 20,20,20 }, true);
+            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / Animation<class EasyGUI_LongPressButton_DetMouAni>(DetectMousePos ? 6 : 8, EasyGUI_AnimationSmooth, Block.ID + Block.Line), { 20,20,20 }, true);
             Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, (ButtonSize.x - 4) * PressTime[Block.ID + Block.Line], ButtonSize.y - 4, { 0,0,0,0 }, EasyGUI_Color / 1.5, false);//触发进度条
             Render_Rect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color.Alpha(Animation<class EasyGUI_LongPressButton_PressEffAni>(IsPressed ? 40 : 0, IsPressed ? 0 : EasyGUI_AnimationSmooth * 1.5f, Block.ID + Block.Line)));//按下动画
             Render_String(Block.Target, 10000 + ButtonPos.x + ButtonSize.x / 2, 10000 + Block.Line, "*" + Text + "*", { 180,180,180 }, EasyGUI_Font, EasyGUI_FontSize, 600);
@@ -629,12 +650,12 @@ namespace EasyGUI_Direct2D
             const auto IsPressed = InputState_IsWindShow && Block.IsInBlock && DetectMousePos && KeyEvent(VK_LBUTTON, true);//是否按下按钮
             Render_Rect(Block.Target, ButtonPos.x, ButtonPos.y, ButtonSize.x, ButtonSize.y, { 0,0,0 });
             Render_Rect(Block.Target, ButtonPos.x + 1, ButtonPos.y + 1, ButtonSize.x - 2, ButtonSize.y - 2, { 60,60,60 });
-            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / Animation<class EasyGUI_MiniButton_DetMouAni>(DetectMousePos ? 6 : 7, EasyGUI_AnimationSmooth, Block.ID + Block.Line), { 20,20,20 }, true);
+            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / Animation<class EasyGUI_MiniButton_DetMouAni>(DetectMousePos ? 6 : 8, EasyGUI_AnimationSmooth, Block.ID + Block.Line), { 20,20,20 }, true);
             Render_Rect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color.Alpha(Animation<class EasyGUI_MiniButton_PressEffAni>(IsPressed ? 40 : 0, IsPressed ? 0 : EasyGUI_AnimationSmooth * 1.5f, Block.ID + Block.Line)));//按下动画
             Render_String(Block.Target, 10000 + ButtonPos.x + ButtonSize.x / 2 + 1, 10000 + Block.Line, Text, { 180,180,180 }, EasyGUI_Font, EasyGUI_FontSize - 3);
             return IsPressed;
         }
-        template<class ValueClass> inline void GUI_Slider(EasyGUI_Block& Block, const string& Text, const ValueClass& StartValue, const ValueClass& EndValue, ValueClass& SliderValue, string Unit = "", Vector4 TextColor = { 200,200,200 }) noexcept//滑条
+        template<class ValueClass> inline void GUI_Slider(EasyGUI_Block& Block, const string& Text, const ValueClass& StartValue, const ValueClass& EndValue, ValueClass& SliderValue, string Unit = "") noexcept//滑条
         {
             const Vector2 NormalSliderPos = { 45 + Block.Offset,Block.Line + 2 }, NormalSliderSize = { (int)(Block.Size.x / 1.5),8 };//滑条坐标,滑条大小
             const auto DetectMousePos = MouseJudgment(Block.Pos.x + NormalSliderPos.x, Block.Pos.y - Block.Start + NormalSliderPos.y, NormalSliderSize.x, NormalSliderSize.y);//窗口检测
@@ -662,11 +683,11 @@ namespace EasyGUI_Direct2D
                 else Unit = FloatPre.str() + Unit;//不存在特殊字符串时
             }
             else Unit = FloatPre.str();
-            Render_String(Block.Target, NormalSliderPos.x, 10000 + NormalSliderPos.y - 8, Text, TextColor, EasyGUI_Font, EasyGUI_FontSize);
+            Render_String(Block.Target, NormalSliderPos.x, 10000 + NormalSliderPos.y - 8, Text, { 200,200,200 }, EasyGUI_Font, EasyGUI_FontSize);
             Render_Rect(Block.Target, NormalSliderPos.x, NormalSliderPos.y, NormalSliderSize.x, NormalSliderSize.y, { 0,0,0 });//黑色外边框
             Render_GradientRect(Block.Target, NormalSliderPos.x + 1, NormalSliderPos.y + 1, NormalSliderSize.x - 2, NormalSliderSize.y - 2, { 25,25,25 }, EasyGUI_Color / Animation<class EasyGUI_Slider_DetMouAni>((DetectMousePos || OutSide[Block.ID + Block.Line]) ? 5 : 6, EasyGUI_AnimationSmooth, Block.ID + Block.Line), true);//滑条背景
             Render_GradientRect(Block.Target, NormalSliderPos.x + 1, NormalSliderPos.y + 1, SliderAni, NormalSliderSize.y - 2, EasyGUI_Color, EasyGUI_Color / 4, true);//滑条
-            Render_MiniString(Block.Target, 10000 + NormalSliderPos.x + SliderAni, NormalSliderPos.y + 1, Unit, TextColor * 0.75);//居中返回值绘制
+            Render_MiniString(Block.Target, 10000 + NormalSliderPos.x + SliderAni, NormalSliderPos.y + 1, Unit + "<DIM>", { 200,200,200 });//居中返回值绘制
             Block.Line += 30;
         }
         inline void GUI_KeySelector(EasyGUI_Block& Block, int& KeySelectValue, int Offset = 0, const string& None = "[-]") noexcept//按键选取按钮
@@ -973,7 +994,7 @@ namespace EasyGUI_Direct2D
             }
             Block.Line += 27;
         }
-        inline void GUI_Tip(EasyGUI_Block& Block, string Text, Vector4 TextColor = { 200,200,200 }) noexcept//鼠标指针提示
+        inline void GUI_Tip(EasyGUI_Block& Block, string Text) noexcept//鼠标指针提示
         {
             if (!Text.empty() && Text.back() == '\n')Text.pop_back();//移除最后的自动换行
             Render_MiniString(Block.Target, 5 + Block.Offset, 10000 + Block.Line, "[?]", { 100,100,100 });//提示符绘制
@@ -991,7 +1012,7 @@ namespace EasyGUI_Direct2D
                 Render_Rect(EasyGUI_RenderTarget, TipRectPos.x, TipRectPos.y, StringSize.x, StringSize.y, { 0,0,0,TipAlphaAni });
                 Render_Rect(EasyGUI_RenderTarget, TipRectPos.x + 1, TipRectPos.y + 1, StringSize.x - 2, StringSize.y - 2, { 60,60,60,TipAlphaAni });
                 Render_GradientRect(EasyGUI_RenderTarget, TipRectPos.x + 2, TipRectPos.y + 2, StringSize.x - 4, StringSize.y - 4, EasyGUI_Color.Alpha(TipAlphaAni) / 15, EasyGUI_Color.Alpha(TipAlphaAni) / 10, true);
-                Render_MiniString(EasyGUI_RenderTarget, TipRectPos.x + 5, TipRectPos.y + 5, Text, TextColor.Alpha(TipAlphaAni), EasyGUI_FontSize - 1, 600, { Block.Size.x - 55,0 });
+                Render_MiniString(EasyGUI_RenderTarget, TipRectPos.x + 5, TipRectPos.y + 5, Text, { 200,200,200,TipAlphaAni }, EasyGUI_FontSize - 1, 600, { Block.Size.x - 55,0 });
             }
         }
         inline void GUI_ColorSelector(EasyGUI_Block& Block, Vector4& ColorValue, int Offset = 0) noexcept//颜色选择器
