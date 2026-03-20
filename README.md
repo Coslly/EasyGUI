@@ -16,7 +16,7 @@ A lightweight and high-performance GUI library based on Direct2D
 - Style can be easily modified
 ## 🥰Showcase (Example)
 ![image](https://github.com/Coslly/EasyGUI/blob/main/Show/ShowCase.png?raw=true)
-![gif](https://github.com/Coslly/EasyGUI/blob/main/Show/ShowCase.gif?raw=true)
+![image](https://github.com/Coslly/EasyGUI/blob/main/Show/ShowCase.gif?raw=true)
 ## 😧How to use it?
 ### - Constitute
 EasyGUI is a fast and lightweight GUI library written in C++. The core drawing library is used for original Direct2D (fast and lightweight) and is composed of the most basic key judgment system. Therefore the performance loss is negligible. Lightweight enough that a single header file is all you need to build a GUI.
