@@ -31,8 +31,7 @@ EasyGUI_Direct2D::EasyGUI GUI_Variable = { "EasyGUI Test Windows", {590, 360} };
 ```
 ### - Add controls
 You need to add a control block.
-
-If you add the Window_Move() function inside the loop then you don't need to add the Sleep() function
+Then add controls inside the block.
 ```cpp
 //Variable
 static bool UI_Checkbox = false;
