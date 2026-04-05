@@ -131,10 +131,11 @@ namespace EasyGUI_Direct2D
         static const short D2DMaxCache = 2048; IDWriteFactory* WriteFactory{}; unordered_map<ID2D1RenderTarget*, ID2D1SolidColorBrush*> CacheBrush{}; unordered_map<uint64_t, ID2D1LinearGradientBrush*> CacheGraBrush{}; unordered_map<size_t, IDWriteTextFormat*> CacheTextFormat{}; unordered_map<size_t, IDWriteTextLayout*> CacheTextLayout{};//Direct2D绘制资源缓存
         POINT EasyGUI_MousePos{}; RECT EasyGUI_WindowPos{}, EasyGUI_ControlWindowPos{};//窗口鼠标坐标
         string EasyGUI_Font = "Verdana";//字体名称
-        float EasyGUI_FontSize = 11;//字体大小
+        float EasyGUI_FontSize = 12;//字体大小
         Vector4 EasyGUI_Color = { 255,255,255 };//主题颜色
         int EasyGUI_Alpha = 250;//窗口透明度
         float EasyGUI_AnimationSmooth = 3;//控件动画速度
+        float EasyGUI_RectRadius = 4;//矩形圆角半径
         float EasyGUI_ColorSat = 0.8, EasyGUI_ColorGrey = 0.03;//主题色调
         double EasyGUI_Tick{}, EasyGUI_DrawFPS{}, EasyGUI_DrawFrame{};//绘制帧数
         bool InputState_IsWindShow = false, InputState_InBlock = false, InputState_IsSlider = false, InputState_ControlWindowShow = false;//防止控件函数之间冲突的判断变量
@@ -244,21 +245,23 @@ namespace EasyGUI_Direct2D
         }
     public:
         inline ID2D1RenderTarget* Render_Target() noexcept { return EasyGUI_RenderTarget; }//主窗口绘制目标
-        inline void Render_Rect(ID2D1RenderTarget* Target, int X, int Y, int Width, int Height, Vector4 Color, bool Sat = true) noexcept//绘制实心矩形
+        inline void Render_Rect(ID2D1RenderTarget* Target, int X, int Y, int Width, int Height, Vector4 Color, bool Sat = true, float Radius = -1) noexcept//绘制实心矩形
         {
             if (Color.a < 3)return;
             if (Sat)Color = Color.Sat(EasyGUI_ColorSat, EasyGUI_ColorGrey);
             CacheBrush[Target]->SetColor(D2DCol(Color));
-            Target->FillRectangle(D2D1::RectF(X, Y, X + Width, Y + Height), CacheBrush[Target]);
+            if (Radius == -1)Radius = EasyGUI_RectRadius;
+            Target->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(X, Y, X + Width, Y + Height), Radius, Radius), CacheBrush[Target]);
         }
-        inline void Render_GradientRect(ID2D1RenderTarget* Target, int X, int Y, int Width, int Height, Vector4 Color_1, Vector4 Color_2, bool Direction, bool Sat = true) noexcept//绘制渐变矩形
+        inline void Render_GradientRect(ID2D1RenderTarget* Target, int X, int Y, int Width, int Height, Vector4 Color_1, Vector4 Color_2, bool Direction, bool Sat = true, float Radius = -1) noexcept//绘制渐变矩形
         {
             if (Color_1.a < 3 && Color_2.a < 3)return;
             if (Sat)Color_1 = Color_1.Sat(EasyGUI_ColorSat, EasyGUI_ColorGrey), Color_2 = Color_2.Sat(EasyGUI_ColorSat, EasyGUI_ColorGrey);
             const auto GradBrush = CacheGradientBrush(Target, Color_1, Color_2);
             if (Direction) { GradBrush->SetStartPoint(D2D1::Point2F(X, Y)); GradBrush->SetEndPoint(D2D1::Point2F(X, Y + Height)); }
             else { GradBrush->SetStartPoint(D2D1::Point2F(X, Y)); GradBrush->SetEndPoint(D2D1::Point2F(X + Width, Y)); }
-            Target->FillRectangle(D2D1::RectF(X, Y, X + Width, Y + Height), GradBrush);
+            if (Radius == -1)Radius = EasyGUI_RectRadius;
+            Target->FillRoundedRectangle(D2D1::RoundedRect(D2D1::RectF(X, Y, X + Width, Y + Height), Radius, Radius), GradBrush);
         }
         inline void Render_Circle(ID2D1RenderTarget* Target, int X, int Y, float Size, Vector4 Color) noexcept//绘制实心圆
         {
@@ -266,6 +269,13 @@ namespace EasyGUI_Direct2D
             Color = Color.Sat(EasyGUI_ColorSat, EasyGUI_ColorGrey);
             CacheBrush[Target]->SetColor(D2DCol(Color));
             Target->FillEllipse(D2D1::Ellipse(D2D1::Point2F(X, Y), Size / 2, Size / 2), CacheBrush[Target]);
+        }
+        inline void Render_Line(ID2D1RenderTarget* Target, float X_1, float Y_1, float X_2, float Y_2, Vector4 Color, float StrokeWidth = 1.f, bool Sat = true) noexcept//绘制线段
+        {
+            if (Color.a < 3)return;
+            if (Sat)Color = Color.Sat(EasyGUI_ColorSat, EasyGUI_ColorGrey);
+            CacheBrush[Target]->SetColor(D2DCol(Color));
+            Target->DrawLine(D2D1::Point2F(X_1, Y_1), D2D1::Point2F(X_2, Y_2), CacheBrush[Target], StrokeWidth);
         }
         inline Vector2 Render_String(ID2D1RenderTarget* Target, int X, int Y, string String, Vector4 Color, const string& FontName, float FontSize, int FontWeight = 400, Vector2 StringLimit = { 0,0 }) noexcept//绘制文字
         {
@@ -357,7 +367,7 @@ namespace EasyGUI_Direct2D
                 //---------------------------------------------------------------------------------------------------
                 ShowWindow(EasyGUI_WindowHWND, SW_SHOW); SetForegroundWindow(EasyGUI_WindowHWND); UpdateWindow(EasyGUI_WindowHWND);//显示窗口
                 SetLayeredWindowAttributes(EasyGUI_WindowHWND, 0, EasyGUI_Alpha, LWA_ALPHA);//设置窗口透明度
-                MARGINS Margin{ -1 }; DwmExtendFrameIntoClientArea(EasyGUI_WindowHWND, &Margin);//设置窗口模糊化
+                MARGINS Margin{ -1 }; DwmExtendFrameIntoClientArea(EasyGUI_WindowHWND, &Margin); DwmExtendFrameIntoClientArea(EasyGUI_ControlWindowHWND, &Margin);//设置窗口模糊化
                 //---------------------------------------------------------------------------------------------------Direct2D初始化
                 CreateHWNDRenderTarget(EasyGUI_WindowHWND, WindowSize, EasyGUI_RenderTarget);
                 CreateHWNDRenderTarget(EasyGUI_ControlWindowHWND, WindowSize, EasyGUI_ControlRenderTarget);
@@ -382,6 +392,7 @@ namespace EasyGUI_Direct2D
                 EasyGUI_RenderTarget->EndDraw(); EasyGUI_ControlRenderTarget->EndDraw();//结束绘制
                 EasyGUI_Tick = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count();//获取当前滴答值
                 EasyGUI_DrawFrame = EasyGUI_Tick - EasyGUI_DrawFrame; if (EasyGUI_DrawFrame > 0)EasyGUI_DrawFPS = 1000.f / EasyGUI_DrawFrame; EasyGUI_DrawFrame = EasyGUI_Tick;//计算绘制帧率
+                KeyEvent(VK_UP, true); KeyEvent(VK_DOWN, true);//释放滚轮按键消息
                 if (!InputState_IsSlider || !InputState_IsWindShow) { timeBeginPeriod(1); Sleep(4); timeEndPeriod(1); }//降低硬件占用
             }
         }
@@ -395,11 +406,13 @@ namespace EasyGUI_Direct2D
         inline string Style_GetFont() noexcept { return EasyGUI_Font; }//获取全局字体
         inline void Style_SetFont(string FontName) noexcept { if (FontName.empty())EasyGUI_Font = "Verdana"; else EasyGUI_Font = FontName; }//设置全局字体
         inline float Style_GetFontSize() noexcept { return EasyGUI_FontSize; }//获取全局字体大小
-        inline void Style_SetFontSize(float FontSize) noexcept { if (!FontSize)EasyGUI_FontSize = 11; else EasyGUI_FontSize = FontSize; }//设置全局字体大小
+        inline void Style_SetFontSize(float FontSize) noexcept { if (!FontSize)EasyGUI_FontSize = 12; else EasyGUI_FontSize = FontSize; }//设置全局字体大小
         inline Vector4 Style_GetColor() noexcept { return EasyGUI_Color; }//获取全局主题颜色
         inline void Style_SetColor(Vector4 MainColor) noexcept { EasyGUI_Color = MainColor.Alpha(255); }//设置全局主题颜色
         inline float Style_GetAnimationSmooth() noexcept { return EasyGUI_AnimationSmooth; }//获取全局控件动画速度
         inline void Style_SetAnimationSmooth(float AnimationSpeed) noexcept { if (AnimationSpeed <= 0.1f)AnimationSpeed = 0.1f; EasyGUI_AnimationSmooth = AnimationSpeed; }//设置全局控件动画速度
+        inline float Style_GetRectRadius() noexcept { return EasyGUI_RectRadius; }//获取全局矩形圆角
+        inline void Style_SetRectRadius(float Radius) noexcept { if (Radius < 0)Radius = 0; EasyGUI_RectRadius = Radius; }//设置全局矩形圆角
         inline void Style_SetColorHue(float Sat = -1, float Grey = -1) noexcept { if (Sat >= 0)EasyGUI_ColorSat = Sat; if (Grey >= 0)EasyGUI_ColorGrey = Grey; }//设置全局主题色调
         //------------------------------------------------------------------------------------------------------------------------------
         inline HWND Window_HWND() noexcept { return EasyGUI_WindowHWND; }//获取窗口HWND
@@ -504,7 +517,7 @@ namespace EasyGUI_Direct2D
             Render_Rect(EasyGUI_RenderTarget, 2, 2, Window_Size.x - 4, Window_Size.y - 4, { StyleColor[6], StyleColor[7], StyleColor[8] });
             Render_Rect(EasyGUI_RenderTarget, 5, 5, Window_Size.x - 10, Window_Size.y - 10, { StyleColor[3], StyleColor[4], StyleColor[5] });
             Render_GradientRect(EasyGUI_RenderTarget, 6, 6, Window_Size.x - 12, Window_Size.y - 12, { StyleColor[12], StyleColor[13], StyleColor[14] }, { StyleColor[15], StyleColor[16], StyleColor[17] }, true);
-            if (ParticleEffect)//粒子特效
+            if (ParticleEffect)//星空粒子特效
             {
                 const auto MaxYSize = GetSystemMetrics(1);
                 for (int i = 0; i <= 150; ++i)//背景粒子
@@ -516,9 +529,9 @@ namespace EasyGUI_Direct2D
             }
             if (StyleCode)//渐变条
             {
-                Render_GradientRect(EasyGUI_RenderTarget, 7, 7, (Window_Size.x - 14) / 2, 2, { LineColor[0] / 2, LineColor[1] / 2, LineColor[2] / 2 }, { LineColor[3] / 2, LineColor[4] / 2, LineColor[5] / 2 }, false);
+                Render_GradientRect(EasyGUI_RenderTarget, 7, 7, (Window_Size.x - 14) / 2 + 3, 2, { LineColor[0] / 2, LineColor[1] / 2, LineColor[2] / 2 }, { LineColor[3] / 2, LineColor[4] / 2, LineColor[5] / 2 }, false);
                 Render_GradientRect(EasyGUI_RenderTarget, 7 + (Window_Size.x - 14) / 2, 7, (Window_Size.x - 14) / 2, 2, { LineColor[3] / 2, LineColor[4] / 2, LineColor[5] / 2 }, { LineColor[6] / 2, LineColor[7] / 2, LineColor[8] / 2 }, false);
-                Render_GradientRect(EasyGUI_RenderTarget, 7, 7, (Window_Size.x - 14) / 2, 1, { LineColor[0], LineColor[1], LineColor[2] }, { LineColor[3], LineColor[4], LineColor[5] }, false);
+                Render_GradientRect(EasyGUI_RenderTarget, 7, 7, (Window_Size.x - 14) / 2 + 3, 1, { LineColor[0], LineColor[1], LineColor[2] }, { LineColor[3], LineColor[4], LineColor[5] }, false);
                 Render_GradientRect(EasyGUI_RenderTarget, 7 + (Window_Size.x - 14) / 2, 7, (Window_Size.x - 14) / 2, 1, { LineColor[3], LineColor[4], LineColor[5] }, { LineColor[6], LineColor[7], LineColor[8] }, false);
             }
             if (!Mark.empty())//水印
@@ -546,7 +559,7 @@ namespace EasyGUI_Direct2D
             if (BlockTitle != "")
             {
                 const auto TextSize = Render_String(EasyGUI_RenderTarget, 0, 0, BlockTitle, {}, EasyGUI_Font, EasyGUI_FontSize + 1, 600).x + 1;//获取文字大小
-                Render_GradientRect(EasyGUI_RenderTarget, X + TextSize + 15, Y + 1, Width - TextSize - 16, 1, { 20,20,20 }, { 60,60,60 }, false);//渐变头条
+                Render_GradientRect(EasyGUI_RenderTarget, X + TextSize + 15, Y + 1, Width - TextSize - 18, 1, { 20,20,20 }, { 60,60,60 }, false);//渐变头条
                 Render_Rect(EasyGUI_RenderTarget, X + 15, Y, TextSize + 10, 3, { 10,10,10 });//文字后遮挡边框
             }
             Y += 2; Height -= 4;
@@ -600,7 +613,7 @@ namespace EasyGUI_Direct2D
         }
         inline void GUI_Checkbox(EasyGUI_Block& Block, const string& Text, bool& CheckboxValue) noexcept//单选框
         {
-            const Vector2 CheckBoxPos = { 25 + Block.Offset, Block.Line - 5 }, CheckBoxSize = { 10,10 };
+            const Vector2 CheckBoxPos = { 25 + Block.Offset, Block.Line - 6 }, CheckBoxSize = { 12,12 };
             const auto DetectMousePos = MouseJudgment(Block.Pos.x + CheckBoxPos.x, Block.Pos.y - Block.Start + CheckBoxPos.y, Render_String(Block.Target, 0, 0, Text, {}, EasyGUI_Font, EasyGUI_FontSize).x + CheckBoxSize.x + 15, CheckBoxSize.y);//窗口检测
             if (InputState_IsWindShow && Block.IsInBlock && DetectMousePos && KeyEvent(VK_LBUTTON, true))CheckboxValue = !CheckboxValue;//当最前端窗口为GUI窗口接收按钮事件
             Render_Rect(Block.Target, CheckBoxPos.x, CheckBoxPos.y, CheckBoxSize.x, CheckBoxSize.y, { 0,0,0 });
@@ -659,7 +672,7 @@ namespace EasyGUI_Direct2D
         }
         template<class ValueClass> inline void GUI_Slider(EasyGUI_Block& Block, const string& Text, const ValueClass& StartValue, const ValueClass& EndValue, ValueClass& SliderValue, string Unit = "") noexcept//滑条
         {
-            const Vector2 NormalSliderPos = { 45 + Block.Offset,Block.Line + 2 }, NormalSliderSize = { (int)(Block.Size.x / 1.5),8 };//滑条坐标,滑条大小
+            const Vector2 NormalSliderPos = { 45 + Block.Offset,Block.Line + 2 }, NormalSliderSize = { (int)(Block.Size.x / 1.5),9 };//滑条坐标,滑条大小
             const auto DetectMousePos = MouseJudgment(Block.Pos.x + NormalSliderPos.x, Block.Pos.y - Block.Start + NormalSliderPos.y, NormalSliderSize.x, NormalSliderSize.y);//窗口检测
             static unordered_map<long, bool> OutSide{};//防止指针脱落时失去控制力
             if (InputState_IsWindShow)//当最前端窗口为GUI窗口接收按钮事件
@@ -692,7 +705,7 @@ namespace EasyGUI_Direct2D
             Render_MiniString(Block.Target, 10000 + NormalSliderPos.x + SliderAni, NormalSliderPos.y + 1, Unit + "<DIM>", { 200,200,200 });//居中返回值绘制
             Block.Line += 30;
         }
-        inline void GUI_KeySelector(EasyGUI_Block& Block, int& KeySelectValue, int Offset = 0, const string& DefaultText = "[-]") noexcept//按键选取按钮
+        inline void GUI_KeySelector(EasyGUI_Block& Block, int& KeySelectValue, int Offset = 0, const string& DefaultText = "-") noexcept//按键选取按钮
         {
             if (KeySelectValue >= 0xCCCCCCCC)KeySelectValue = 0;//修复过量
             const auto DetectMousePos = MouseJudgment(Block.Pos.x + Block.Size.x - Offset - 50, Block.Pos.y - Block.Start + Block.Line - 6, 30, 12);//鼠标坐标检测
@@ -714,152 +727,152 @@ namespace EasyGUI_Direct2D
                 switch (KeySelectValue)
                 {
                 case 0x00: DrawString_VK = DefaultText; break;
-                case 0x01: DrawString_VK = "[M1]"; break;
-                case 0x02: DrawString_VK = "[M2]"; break;
-                case 0x03: DrawString_VK = "[CAN]"; break;
-                case 0x04: DrawString_VK = "[M3]"; break;
-                case 0x05: DrawString_VK = "[M4]"; break;
-                case 0x06: DrawString_VK = "[M5]"; break;
-                case 0x07: DrawString_VK = "[NON]"; break;
-                case 0x08: DrawString_VK = "[BAK]"; break;
-                case 0x09: DrawString_VK = "[TAB]"; break;
-                case 0x0C: DrawString_VK = "[CLE]"; break;
-                case 0x0D: DrawString_VK = "[ENT]"; break;
-                case 0x10: DrawString_VK = "[SHF]"; break;
-                case 0x11: DrawString_VK = "[CLR]"; break;
-                case 0x12: DrawString_VK = "[ALT]"; break;
-                case 0x13: DrawString_VK = "[PAU]"; break;
-                case 0x14: DrawString_VK = "[CAP]"; break;
-                case 0x15: DrawString_VK = "[KAN]"; break;
-                case 0x16: DrawString_VK = "[KAN]"; break;
-                case 0x17: DrawString_VK = "[JUN]"; break;
-                case 0x18: DrawString_VK = "[FIN]"; break;
-                case 0x19: DrawString_VK = "[HAN]"; break;
-                case 0x1B: DrawString_VK = "[ESC]"; break;
-                case 0x1C: DrawString_VK = "[CON]"; break;
-                case 0x1D: DrawString_VK = "[NON]"; break;
-                case 0x1E: DrawString_VK = "[ACC]"; break;
-                case 0x1F: DrawString_VK = "[MOD]"; break;
-                case 0x20: DrawString_VK = "[SPA]"; break;
-                case 0x21: DrawString_VK = "[PRI]"; break;
-                case 0x22: DrawString_VK = "[NEX]"; break;
-                case 0x23: DrawString_VK = "[END]"; break;
-                case 0x24: DrawString_VK = "[HOM]"; break;
-                case 0x25: DrawString_VK = "[LEF]"; break;
-                case 0x26: DrawString_VK = "[UP]"; break;
-                case 0x27: DrawString_VK = "[RIG]"; break;
-                case 0x28: DrawString_VK = "[DN]"; break;
-                case 0x29: DrawString_VK = "[SEL]"; break;
-                case 0x2A: DrawString_VK = "[PRI]"; break;
-                case 0x2B: DrawString_VK = "[EXE]"; break;
-                case 0x2C: DrawString_VK = "[SNA]"; break;
-                case 0x2D: DrawString_VK = "[INS]"; break;
-                case 0x2E: DrawString_VK = "[DEL]"; break;
-                case 0x2F: DrawString_VK = "[HEL]"; break;
-                case 0x30: DrawString_VK = "[0]"; break;
-                case 0x31: DrawString_VK = "[1]"; break;
-                case 0x32: DrawString_VK = "[2]"; break;
-                case 0x33: DrawString_VK = "[3]"; break;
-                case 0x34: DrawString_VK = "[4]"; break;
-                case 0x35: DrawString_VK = "[5]"; break;
-                case 0x36: DrawString_VK = "[6]"; break;
-                case 0x37: DrawString_VK = "[7]"; break;
-                case 0x38: DrawString_VK = "[8]"; break;
-                case 0x39: DrawString_VK = "[9]"; break;
-                case 0x41: DrawString_VK = "[A]"; break;
-                case 0x42: DrawString_VK = "[B]"; break;
-                case 0x43: DrawString_VK = "[C]"; break;
-                case 0x44: DrawString_VK = "[D]"; break;
-                case 0x45: DrawString_VK = "[E]"; break;
-                case 0x46: DrawString_VK = "[F]"; break;
-                case 0x47: DrawString_VK = "[G]"; break;
-                case 0x48: DrawString_VK = "[H]"; break;
-                case 0x49: DrawString_VK = "[I]"; break;
-                case 0x4A: DrawString_VK = "[J]"; break;
-                case 0x4B: DrawString_VK = "[K]"; break;
-                case 0x4C: DrawString_VK = "[L]"; break;
-                case 0x4D: DrawString_VK = "[M]"; break;
-                case 0x4E: DrawString_VK = "[N]"; break;
-                case 0x4F: DrawString_VK = "[O]"; break;
-                case 0x50: DrawString_VK = "[P]"; break;
-                case 0x51: DrawString_VK = "[Q]"; break;
-                case 0x52: DrawString_VK = "[R]"; break;
-                case 0x53: DrawString_VK = "[S]"; break;
-                case 0x54: DrawString_VK = "[T]"; break;
-                case 0x55: DrawString_VK = "[U]"; break;
-                case 0x56: DrawString_VK = "[V]"; break;
-                case 0x57: DrawString_VK = "[W]"; break;
-                case 0x58: DrawString_VK = "[X]"; break;
-                case 0x59: DrawString_VK = "[Y]"; break;
-                case 0x5A: DrawString_VK = "[Z]"; break;
-                case 0x5B: DrawString_VK = "[WIN]"; break;
-                case 0x5C: DrawString_VK = "[WIN]"; break;
-                case 0x5D: DrawString_VK = "[APP]"; break;
-                case 0x5F: DrawString_VK = "[SLP]"; break;
-                case 0x60: DrawString_VK = "[0]"; break;
-                case 0x61: DrawString_VK = "[1]"; break;
-                case 0x62: DrawString_VK = "[2]"; break;
-                case 0x63: DrawString_VK = "[3]"; break;
-                case 0x64: DrawString_VK = "[4]"; break;
-                case 0x65: DrawString_VK = "[5]"; break;
-                case 0x66: DrawString_VK = "[6]"; break;
-                case 0x67: DrawString_VK = "[7]"; break;
-                case 0x68: DrawString_VK = "[8]"; break;
-                case 0x69: DrawString_VK = "[9]"; break;
-                case 0x6A: DrawString_VK = "[*]"; break;
-                case 0x6B: DrawString_VK = "[+]"; break;
-                case 0x6C: DrawString_VK = "[SEP]"; break;
-                case 0x6D: DrawString_VK = "[-]"; break;
-                case 0x6E: DrawString_VK = "[.]"; break;
-                case 0x6F: DrawString_VK = "[/]"; break;
-                case 0x70: DrawString_VK = "[F1]"; break;
-                case 0x71: DrawString_VK = "[F2]"; break;
-                case 0x72: DrawString_VK = "[F3]"; break;
-                case 0x73: DrawString_VK = "[F4]"; break;
-                case 0x74: DrawString_VK = "[F5]"; break;
-                case 0x75: DrawString_VK = "[F6]"; break;
-                case 0x76: DrawString_VK = "[F7]"; break;
-                case 0x77: DrawString_VK = "[F8]"; break;
-                case 0x78: DrawString_VK = "[F9]"; break;
-                case 0x79: DrawString_VK = "[F10]"; break;
-                case 0x7A: DrawString_VK = "[F11]"; break;
-                case 0x7B: DrawString_VK = "[F12]"; break;
-                case 0x7C: DrawString_VK = "[F13]"; break;
-                case 0x7D: DrawString_VK = "[F14]"; break;
-                case 0x7E: DrawString_VK = "[F15]"; break;
-                case 0x7F: DrawString_VK = "[F16]"; break;
-                case 0x80: DrawString_VK = "[F17]"; break;
-                case 0x81: DrawString_VK = "[F18]"; break;
-                case 0x82: DrawString_VK = "[F19]"; break;
-                case 0x83: DrawString_VK = "[F20]"; break;
-                case 0x84: DrawString_VK = "[F21]"; break;
-                case 0x85: DrawString_VK = "[F22]"; break;
-                case 0x86: DrawString_VK = "[F23]"; break;
-                case 0x87: DrawString_VK = "[F24]"; break;
-                case 0x90: DrawString_VK = "[NUM]"; break;
-                case 0x91: DrawString_VK = "[SCR]"; break;
-                case 0xA0: DrawString_VK = "[SHF]"; break;//L
-                case 0xA1: DrawString_VK = "[SHF]"; break;//R
-                case 0xA2: DrawString_VK = "[CLR]"; break;//L
-                case 0xA3: DrawString_VK = "[CLR]"; break;//R
-                case 0xA4: DrawString_VK = "[ALT]"; break;//L
-                case 0xA5: DrawString_VK = "[ALT]"; break;//R
-                case 0xC0: DrawString_VK = "[~]"; break;
-                case 0xBB: DrawString_VK = "[=]"; break;
-                case 0xBC: DrawString_VK = "[,]"; break;
-                case 0xBD: DrawString_VK = "[-]"; break;
-                case 0xBE: DrawString_VK = "[.]"; break;
-                case 0xBF: DrawString_VK = "[/]"; break;
-                case 0xBA: DrawString_VK = "[;]"; break;
-                case 0xDE: DrawString_VK = "[']"; break;
-                case 0xDB: DrawString_VK = "[[]"; break;
-                case 0xDD: DrawString_VK = "[]]"; break;
-                case 0xDC: DrawString_VK = "[\]"; break;
-                default: DrawString_VK = "[" + std::to_string(KeySelectValue) + "]"; break;//如果什么都不是直接返回编码
+                case 0x01: DrawString_VK = "M1"; break;
+                case 0x02: DrawString_VK = "M2"; break;
+                case 0x03: DrawString_VK = "CAN"; break;
+                case 0x04: DrawString_VK = "M3"; break;
+                case 0x05: DrawString_VK = "M4"; break;
+                case 0x06: DrawString_VK = "M5"; break;
+                case 0x07: DrawString_VK = "NON"; break;
+                case 0x08: DrawString_VK = "BAK"; break;
+                case 0x09: DrawString_VK = "TAB"; break;
+                case 0x0C: DrawString_VK = "CLE"; break;
+                case 0x0D: DrawString_VK = "ENT"; break;
+                case 0x10: DrawString_VK = "SHF"; break;
+                case 0x11: DrawString_VK = "CLR"; break;
+                case 0x12: DrawString_VK = "ALT"; break;
+                case 0x13: DrawString_VK = "PAU"; break;
+                case 0x14: DrawString_VK = "CAP"; break;
+                case 0x15: DrawString_VK = "KAN"; break;
+                case 0x16: DrawString_VK = "KAN"; break;
+                case 0x17: DrawString_VK = "JUN"; break;
+                case 0x18: DrawString_VK = "FIN"; break;
+                case 0x19: DrawString_VK = "HAN"; break;
+                case 0x1B: DrawString_VK = "ESC"; break;
+                case 0x1C: DrawString_VK = "CON"; break;
+                case 0x1D: DrawString_VK = "NON"; break;
+                case 0x1E: DrawString_VK = "ACC"; break;
+                case 0x1F: DrawString_VK = "MOD"; break;
+                case 0x20: DrawString_VK = "SPA"; break;
+                case 0x21: DrawString_VK = "PRI"; break;
+                case 0x22: DrawString_VK = "NEX"; break;
+                case 0x23: DrawString_VK = "END"; break;
+                case 0x24: DrawString_VK = "HOM"; break;
+                case 0x25: DrawString_VK = "LEF"; break;
+                case 0x26: DrawString_VK = "UP"; break;
+                case 0x27: DrawString_VK = "RIG"; break;
+                case 0x28: DrawString_VK = "DN"; break;
+                case 0x29: DrawString_VK = "SEL"; break;
+                case 0x2A: DrawString_VK = "PRI"; break;
+                case 0x2B: DrawString_VK = "EXE"; break;
+                case 0x2C: DrawString_VK = "SNA"; break;
+                case 0x2D: DrawString_VK = "INS"; break;
+                case 0x2E: DrawString_VK = "DEL"; break;
+                case 0x2F: DrawString_VK = "HEL"; break;
+                case 0x30: DrawString_VK = "0"; break;
+                case 0x31: DrawString_VK = "1"; break;
+                case 0x32: DrawString_VK = "2"; break;
+                case 0x33: DrawString_VK = "3"; break;
+                case 0x34: DrawString_VK = "4"; break;
+                case 0x35: DrawString_VK = "5"; break;
+                case 0x36: DrawString_VK = "6"; break;
+                case 0x37: DrawString_VK = "7"; break;
+                case 0x38: DrawString_VK = "8"; break;
+                case 0x39: DrawString_VK = "9"; break;
+                case 0x41: DrawString_VK = "A"; break;
+                case 0x42: DrawString_VK = "B"; break;
+                case 0x43: DrawString_VK = "C"; break;
+                case 0x44: DrawString_VK = "D"; break;
+                case 0x45: DrawString_VK = "E"; break;
+                case 0x46: DrawString_VK = "F"; break;
+                case 0x47: DrawString_VK = "G"; break;
+                case 0x48: DrawString_VK = "H"; break;
+                case 0x49: DrawString_VK = "I"; break;
+                case 0x4A: DrawString_VK = "J"; break;
+                case 0x4B: DrawString_VK = "K"; break;
+                case 0x4C: DrawString_VK = "L"; break;
+                case 0x4D: DrawString_VK = "M"; break;
+                case 0x4E: DrawString_VK = "N"; break;
+                case 0x4F: DrawString_VK = "O"; break;
+                case 0x50: DrawString_VK = "P"; break;
+                case 0x51: DrawString_VK = "Q"; break;
+                case 0x52: DrawString_VK = "R"; break;
+                case 0x53: DrawString_VK = "S"; break;
+                case 0x54: DrawString_VK = "T"; break;
+                case 0x55: DrawString_VK = "U"; break;
+                case 0x56: DrawString_VK = "V"; break;
+                case 0x57: DrawString_VK = "W"; break;
+                case 0x58: DrawString_VK = "X"; break;
+                case 0x59: DrawString_VK = "Y"; break;
+                case 0x5A: DrawString_VK = "Z"; break;
+                case 0x5B: DrawString_VK = "WIN"; break;
+                case 0x5C: DrawString_VK = "WIN"; break;
+                case 0x5D: DrawString_VK = "APP"; break;
+                case 0x5F: DrawString_VK = "SLP"; break;
+                case 0x60: DrawString_VK = "0"; break;
+                case 0x61: DrawString_VK = "1"; break;
+                case 0x62: DrawString_VK = "2"; break;
+                case 0x63: DrawString_VK = "3"; break;
+                case 0x64: DrawString_VK = "4"; break;
+                case 0x65: DrawString_VK = "5"; break;
+                case 0x66: DrawString_VK = "6"; break;
+                case 0x67: DrawString_VK = "7"; break;
+                case 0x68: DrawString_VK = "8"; break;
+                case 0x69: DrawString_VK = "9"; break;
+                case 0x6A: DrawString_VK = "*"; break;
+                case 0x6B: DrawString_VK = "+"; break;
+                case 0x6C: DrawString_VK = "SEP"; break;
+                case 0x6D: DrawString_VK = "-"; break;
+                case 0x6E: DrawString_VK = "."; break;
+                case 0x6F: DrawString_VK = "/"; break;
+                case 0x70: DrawString_VK = "F1"; break;
+                case 0x71: DrawString_VK = "F2"; break;
+                case 0x72: DrawString_VK = "F3"; break;
+                case 0x73: DrawString_VK = "F4"; break;
+                case 0x74: DrawString_VK = "F5"; break;
+                case 0x75: DrawString_VK = "F6"; break;
+                case 0x76: DrawString_VK = "F7"; break;
+                case 0x77: DrawString_VK = "F8"; break;
+                case 0x78: DrawString_VK = "F9"; break;
+                case 0x79: DrawString_VK = "F10"; break;
+                case 0x7A: DrawString_VK = "F11"; break;
+                case 0x7B: DrawString_VK = "F12"; break;
+                case 0x7C: DrawString_VK = "F13"; break;
+                case 0x7D: DrawString_VK = "F14"; break;
+                case 0x7E: DrawString_VK = "F15"; break;
+                case 0x7F: DrawString_VK = "F16"; break;
+                case 0x80: DrawString_VK = "F17"; break;
+                case 0x81: DrawString_VK = "F18"; break;
+                case 0x82: DrawString_VK = "F19"; break;
+                case 0x83: DrawString_VK = "F20"; break;
+                case 0x84: DrawString_VK = "F21"; break;
+                case 0x85: DrawString_VK = "F22"; break;
+                case 0x86: DrawString_VK = "F23"; break;
+                case 0x87: DrawString_VK = "F24"; break;
+                case 0x90: DrawString_VK = "NUM"; break;
+                case 0x91: DrawString_VK = "SCR"; break;
+                case 0xA0: DrawString_VK = "SHF"; break;
+                case 0xA1: DrawString_VK = "SHF"; break;
+                case 0xA2: DrawString_VK = "CLR"; break;
+                case 0xA3: DrawString_VK = "CLR"; break;
+                case 0xA4: DrawString_VK = "ALT"; break;
+                case 0xA5: DrawString_VK = "ALT"; break;
+                case 0xC0: DrawString_VK = "~"; break;
+                case 0xBB: DrawString_VK = "="; break;
+                case 0xBC: DrawString_VK = ","; break;
+                case 0xBD: DrawString_VK = "-"; break;
+                case 0xBE: DrawString_VK = "."; break;
+                case 0xBF: DrawString_VK = "/"; break;
+                case 0xBA: DrawString_VK = ";"; break;
+                case 0xDE: DrawString_VK = "'"; break;
+                case 0xDB: DrawString_VK = "["; break;
+                case 0xDD: DrawString_VK = "]"; break;
+                case 0xDC: DrawString_VK = "|"; break;
+                default: DrawString_VK = std::to_string(KeySelectValue); break;//如果什么都不是直接返回编码
                 }
-                Render_MiniString(Block.Target, 10000 + Block.Size.x - Offset - 33, 10000 + Block.Line, DrawString_VK, EasyGUI_Color.Min_Bri(190) / Animation<class EasyGUI_KeySelector_DetMouAni>(DetectMousePos ? 2 : 2.5f, EasyGUI_AnimationSmooth, Block.ID + Block.Line + Offset * 10000), 8);
+                Render_MiniString(Block.Target, 10000 + Block.Size.x - Offset - 33, 10000 + Block.Line, "(" + DrawString_VK + ")", EasyGUI_Color.Min_Bri(190) / Animation<class EasyGUI_KeySelector_DetMouAni>(DetectMousePos ? 2 : 2.5f, EasyGUI_AnimationSmooth, Block.ID + Block.Line + Offset * 10000), 8);
             }
-            else Render_MiniString(Block.Target, 10000 + Block.Size.x - Offset - 33, 10000 + Block.Line, "[-]", EasyGUI_Color / 1.5, 8);//激活读取
+            else Render_MiniString(Block.Target, 10000 + Block.Size.x - Offset - 33, 10000 + Block.Line, "(-)", EasyGUI_Color / 1.5, 8);//激活读取
         }
         inline void GUI_InputText(EasyGUI_Block& Block, string& InputValue, const string& DefaultText = "") noexcept//字符串输入框 (仅英文数字符号)
         {
@@ -997,7 +1010,7 @@ namespace EasyGUI_Direct2D
             }
             Block.Line += 27;
         }
-        inline void GUI_Tip(EasyGUI_Block& Block, string Text, const string& DefaultText = "[?]") noexcept//鼠标指针提示
+        inline void GUI_Tip(EasyGUI_Block& Block, string Text, const string& DefaultText = "(?)") noexcept//鼠标指针提示
         {
             if (!Text.empty() && Text.back() == '\n')Text.pop_back();//移除最后的自动换行
             const auto DetectMousePos = Block.IsInBlock && InputState_IsWindShow && !KeyEvent(VK_LBUTTON) && MouseJudgment(Block.Pos.x + 5 + Block.Offset, Block.Pos.y - Block.Start + Block.Line - 6, 16, 11);//当鼠标移动到问号 且GUI窗口为最顶层
@@ -1018,7 +1031,7 @@ namespace EasyGUI_Direct2D
         {
             auto DrawCheckerboard = [&](ID2D1RenderTarget* Target, int X, int Y, int Width, int Height) {//绘制棋盘格背景
                 for (int i = 0; i < Height; i += 2)for (int j = 0; j < Width; j += 2)
-                    Render_Rect(Target, j + X, i + Y, 2, 2, ((i / 2) + (j / 2)) % 2 ? Vector4{ 150, 150, 150 } : Vector4{ 200, 200, 200 });
+                    Render_Rect(Target, j + X, i + Y, 2, 2, ((i / 2) + (j / 2)) % 2 ? Vector4{ 150, 150, 150 } : Vector4{ 200, 200, 200 }, true, 0);
                 };
             const Vector2 ColorRectPos = { Block.Size.x - 43 - Offset,Block.Line - 6 }, ColorPickerSize = { 200, 100 };//颜色预览框位置,颜色选择器大小
             static unordered_map<long, bool> OpenColorPicker{};//颜色选择器开关
@@ -1057,20 +1070,20 @@ namespace EasyGUI_Direct2D
                 Render_Rect(EasyGUI_ControlRenderTarget, 0, 0, ColorPickerSize.x, ColorPickerSize.y, { 0,0,0 });
                 Render_Rect(EasyGUI_ControlRenderTarget, 1, 1, ColorPickerSize.x - 2, ColorPickerSize.y - 2, { 60,60,60 });
                 Render_GradientRect(EasyGUI_ControlRenderTarget, 2, 2, ColorPickerSize.x - 4, ColorPickerSize.y - 4, EasyGUI_Color / 15, EasyGUI_Color / 10, true);
-                Render_Rect(EasyGUI_ControlRenderTarget, 5, 5, ColorPickerSize.x - 10, 20, { 0,0,0 });//彩虹颜色条
-                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 0, 6, 32, 18, { 255,0,0 }, { 255,255,0 }, false, false);
-                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 1, 6, 32, 18, { 255,255,0 }, { 0,255,0 }, false, false);
-                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 2, 6, 32, 18, { 0,255,0 }, { 0,255,255 }, false, false);
-                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 3, 6, 32, 18, { 0,255,255 }, { 0,0,255 }, false, false);
-                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 4, 6, 32, 18, { 0,0,255 }, { 255,0,255 }, false, false);
-                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 5, 6, 32 - 4, 18, { 255,0,255 }, { 255,0,0 }, false, false);
-                Render_Rect(EasyGUI_ControlRenderTarget, 5, 5 + 25, ColorPickerSize.x - 10, 20, { 0,0,0 });//明暗颜色条
-                Render_GradientRect(EasyGUI_ControlRenderTarget, 6, 6 + 25, (ColorPickerSize.x - 10) / 2, 18, { 0,0,0 }, BaseColor[Block.ID + Block.Line + Offset * 10000].Alpha(255), false, false);
-                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + (ColorPickerSize.x - 10) / 2, 6 + 25, (ColorPickerSize.x - 10) / 2 - 2, 18, BaseColor[Block.ID + Block.Line + Offset * 10000].Alpha(255), { 255,255,255 }, false, false);
-                Render_Rect(EasyGUI_ControlRenderTarget, 5, 5 + 50, ColorPickerSize.x - 10, 20, { 0,0,0 });//透明颜色条
+                Render_Rect(EasyGUI_ControlRenderTarget, 8, 5, ColorPickerSize.x - 16, 20, { 0,0,0 }, true, 0);//彩虹颜色条
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 0, 6, 32, 18, { 255,0,0 }, { 255,255,0 }, false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 1, 6, 32, 18, { 255,255,0 }, { 0,255,0 }, false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 2, 6, 32, 18, { 0,255,0 }, { 0,255,255 }, false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 3, 6, 32, 18, { 0,255,255 }, { 0,0,255 }, false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 4, 6, 32, 18, { 0,0,255 }, { 255,0,255 }, false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 5, 6, 32 - 4, 18, { 255,0,255 }, { 255,0,0 }, false, false, 0);
+                Render_Rect(EasyGUI_ControlRenderTarget, 5, 5 + 25, ColorPickerSize.x - 10, 20, { 0,0,0 }, true, 0);//明暗颜色条
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6, 6 + 25, (ColorPickerSize.x - 10) / 2, 18, { 0,0,0 }, BaseColor[Block.ID + Block.Line + Offset * 10000].Alpha(255), false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + (ColorPickerSize.x - 10) / 2, 6 + 25, (ColorPickerSize.x - 10) / 2 - 2, 18, BaseColor[Block.ID + Block.Line + Offset * 10000].Alpha(255), { 255,255,255 }, false, false, 0);
+                Render_Rect(EasyGUI_ControlRenderTarget, 5, 5 + 50, ColorPickerSize.x - 10, 20, { 0,0,0 }, true, 0);//透明颜色条
                 DrawCheckerboard(EasyGUI_ControlRenderTarget, 6, 6 + 50, ColorPickerSize.x - 12, 18);
-                Render_GradientRect(EasyGUI_ControlRenderTarget, 6, 6 + 50, ColorPickerSize.x - 12, 18, ColorValue.Alpha(255), ColorValue.Alpha(0), false, false);
-                Render_String(EasyGUI_ControlRenderTarget, 10000 + ColorPickerSize.x / 2, 10000 + 6 + 75 + 5, "[R:" + std::to_string(ColorValue.r) + "] [G:" + std::to_string(ColorValue.g) + "] [B:" + std::to_string(ColorValue.b) + "] [A:" + std::to_string(ColorValue.a) + "]", ColorValue.Min_Bri(100).Max_Bri(220).Alpha(255), EasyGUI_Font, EasyGUI_FontSize, 500);//颜色字符串
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6, 6 + 50, ColorPickerSize.x - 12, 18, ColorValue.Alpha(255), ColorValue.Alpha(0), false, false, 0);
+                Render_String(EasyGUI_ControlRenderTarget, 10000 + ColorPickerSize.x / 2, 10000 + 6 + 75 + 5, "(R:" + std::to_string(ColorValue.r) + ")(G:" + std::to_string(ColorValue.g) + ")(B:" + std::to_string(ColorValue.b) + ")(A:" + std::to_string(ColorValue.a) + ")", ColorValue.Min_Bri(100).Max_Bri(220).Alpha(255), EasyGUI_Font, EasyGUI_FontSize, 500);//颜色字符串
                 if (KeyEvent(VK_LBUTTON))//绘制选择标识
                 {
                     if (SelectBar_1)Render_Rect(EasyGUI_ControlRenderTarget, EasyGUI_MousePos.x - EasyGUI_ControlWindowPos.left + 1, 6, 1, 18, { 0,0,1 }, false);
@@ -1079,7 +1092,7 @@ namespace EasyGUI_Direct2D
                 }
             }
             Render_Rect(Block.Target, ColorRectPos.x, ColorRectPos.y, 20, 12, { 0,0,0 });//黑色边框
-            DrawCheckerboard(Block.Target, ColorRectPos.x + 1, ColorRectPos.y + 1, 18, 10);//透明格子绘制
+            DrawCheckerboard(Block.Target, ColorRectPos.x + 2, ColorRectPos.y + 2, 16, 8);//透明格子绘制
             Render_GradientRect(Block.Target, ColorRectPos.x + 1, ColorRectPos.y + 1, 18, 10, ColorValue, ColorValue / 3, true, false);//颜色预览框
         }
         inline void GUI_PosSelector(EasyGUI_Block& Block, Vector3& PosValue) noexcept//坐标选择器
