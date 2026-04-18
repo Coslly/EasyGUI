@@ -359,8 +359,8 @@ namespace EasyGUI_Direct2D
             WNDCLASS WindowClass{}; WindowClass.lpfnWndProc = EasyGUI_WindowProcess; WindowClass.hInstance = GetModuleHandle(0); WindowClass.lpszClassName = WindowName.c_str(); RegisterClass(&WindowClass);//窗口注册类
             while (true)//防止创建失败
             {
-                EasyGUI_WindowHWND = CreateWindowEx(TopMost ? WS_EX_TOPMOST : 0 | WS_EX_LAYERED, WindowName.c_str(), WindowName.c_str(), WS_POPUP, GetSystemMetrics(0) / 2 - WindowSize.x / 2, GetSystemMetrics(1) / 2 - WindowSize.y / 2, WindowSize.x, WindowSize.y, 0, 0, WindowClass.hInstance, 0);
-                EasyGUI_ControlWindowHWND = CreateWindowEx(TopMost ? WS_EX_TOPMOST : 0 | WS_EX_LAYERED, WindowName.c_str(), WindowName.c_str(), WS_POPUP, 0, 0, 0, 0, EasyGUI_WindowHWND, 0, WindowClass.hInstance, 0);
+                EasyGUI_WindowHWND = CreateWindowEx((TopMost ? WS_EX_TOPMOST : 0) | WS_EX_LAYERED, WindowName.c_str(), WindowName.c_str(), WS_POPUP, GetSystemMetrics(0) / 2 - WindowSize.x / 2, GetSystemMetrics(1) / 2 - WindowSize.y / 2, WindowSize.x, WindowSize.y, 0, 0, WindowClass.hInstance, 0);
+                EasyGUI_ControlWindowHWND = CreateWindowEx((TopMost ? WS_EX_TOPMOST : 0) | WS_EX_LAYERED, WindowName.c_str(), WindowName.c_str(), WS_POPUP, 0, 0, 0, 0, EasyGUI_WindowHWND, 0, WindowClass.hInstance, 0);
                 //---------------------------------------------------------------------------------------------------
                 ShowWindow(EasyGUI_WindowHWND, SW_SHOW); SetForegroundWindow(EasyGUI_WindowHWND); UpdateWindow(EasyGUI_WindowHWND);//显示窗口
                 SetLayeredWindowAttributes(EasyGUI_WindowHWND, 0, EasyGUI_Alpha, LWA_ALPHA);//设置窗口透明度
