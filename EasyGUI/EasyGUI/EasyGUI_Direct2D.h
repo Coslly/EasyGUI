@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include <Vector>
 #include <String>
 #include <Chrono>
@@ -122,13 +122,13 @@ namespace EasyGUI_Direct2D
         }
         return DefWindowProc(Hwnd, Message, wParam, lParam);//定义回调函数的返回值
     }
-    struct EasyGUI_Block { string Title = ""; Vector2 Pos{}, Size{}; int ID{}, Line{}, Start{}, Offset{}; bool IsInBlock{}, IsInScrollArea{}; ID2D1BitmapRenderTarget* Target{}; ID2D1Bitmap* Bitmap{}; };
+    struct EasyGUI_Block { string Title = ""; Vector2 Pos{}, Size{}; int ID{}, Line{}, Start{}, Offset{}; bool IsInBlock{}, IsInScrollArea{}; ID2D1BitmapRenderTarget* Target{}; };//控件块结构体
     class EasyGUI
     {
     private:
         HWND EasyGUI_WindowHWND{}, EasyGUI_ControlWindowHWND{};//窗口句柄
         ID2D1HwndRenderTarget* EasyGUI_RenderTarget{}; ID2D1HwndRenderTarget* EasyGUI_ControlRenderTarget{};//Direct2D绘制目标
-        static const short D2DMaxCache = 2048; IDWriteFactory* WriteFactory{}; unordered_map<ID2D1RenderTarget*, ID2D1SolidColorBrush*> CacheBrush{}; unordered_map<uint64_t, ID2D1LinearGradientBrush*> CacheGraBrush{}; unordered_map<size_t, IDWriteTextFormat*> CacheTextFormat{}; unordered_map<size_t, IDWriteTextLayout*> CacheTextLayout{};//Direct2D绘制资源缓存
+        static const short D2DMaxCache = 512; IDWriteFactory* WriteFactory{};  unordered_map<uint64_t, ID2D1BitmapRenderTarget*> CacheBitmap{}; unordered_map<ID2D1RenderTarget*, ID2D1SolidColorBrush*> CacheBrush{}; unordered_map<uint64_t, ID2D1LinearGradientBrush*> CacheGraBrush{}; unordered_map<uint64_t, IDWriteTextFormat*> CacheTextFormat{}; unordered_map<uint64_t, IDWriteTextLayout*> CacheTextLayout{};//Direct2D绘制资源缓存
         POINT EasyGUI_MousePos{}; RECT EasyGUI_WindowPos{}, EasyGUI_ControlWindowPos{};//窗口鼠标坐标
         string EasyGUI_Font = "Verdana";//字体名称
         float EasyGUI_FontSize = 12;//字体大小
@@ -158,28 +158,24 @@ namespace EasyGUI_Direct2D
             if (WriteFactory)WriteFactory->Release(); DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&WriteFactory));
             if (!CacheBrush[Target])Target->CreateSolidColorBrush(D2D1::ColorF(0, 0, 0, 0), &CacheBrush[Target]);
         }
-        inline ID2D1BitmapRenderTarget* CreateBitmapRenderTarget(ID2D1RenderTarget* MainTarget, Vector2 PaintSize, long CreateID) noexcept//创建控件渲染目标
+        inline ID2D1BitmapRenderTarget* CreateBitmapRenderTarget(ID2D1RenderTarget* MainTarget, Vector2 PaintSize, uint64_t CreateID) noexcept//创建控件渲染目标
         {
-            static unordered_map<long, ID2D1BitmapRenderTarget*> RenderBitMap{};
-            if (!RenderBitMap[CreateID])
+            if (CacheBitmap.count(CreateID))
             {
-                MainTarget->CreateCompatibleRenderTarget(D2D1::SizeF(PaintSize.x, PaintSize.y), &RenderBitMap[CreateID]);
-                if (!CacheBrush[RenderBitMap[CreateID]])RenderBitMap[CreateID]->CreateSolidColorBrush(D2D1::ColorF(0, 0, 0, 0), &CacheBrush[RenderBitMap[CreateID]]);
+                const auto OldSize = CacheBitmap[CreateID]->GetSize();
+                if (OldSize.width == PaintSize.x && OldSize.height == PaintSize.y)return CacheBitmap[CreateID];
+                SafeRelease(CacheBrush[CacheBitmap[CreateID]]);
+                CacheBrush.erase(CacheBitmap[CreateID]);
+                SafeRelease(CacheBitmap[CreateID]);
             }
-            else {
-                const auto OldSize = RenderBitMap[CreateID]->GetSize();
-                if (OldSize.width != PaintSize.x || OldSize.height != PaintSize.y)
-                {
-                    SafeRelease(RenderBitMap[CreateID]);
-                    MainTarget->CreateCompatibleRenderTarget(D2D1::SizeF(PaintSize.x, PaintSize.y), &RenderBitMap[CreateID]);
-                }
-            }
-            return RenderBitMap[CreateID];
+            MainTarget->CreateCompatibleRenderTarget(D2D1::SizeF(PaintSize.x, PaintSize.y), &CacheBitmap[CreateID]);
+            CacheBitmap[CreateID]->CreateSolidColorBrush(D2D1::ColorF(0, 0, 0, 0), &CacheBrush[CacheBitmap[CreateID]]);
+            return CacheBitmap[CreateID];
         }
         inline D2D1::ColorF D2DCol(Vector4 Color) noexcept { Color = Color.Limit(); return D2D1::ColorF((float)Color.r / 255.f, (float)Color.g / 255.f, (float)Color.b / 255.f, (float)Color.a / 255.f); };//颜色转换
         inline ID2D1LinearGradientBrush* CacheGradientBrush(ID2D1RenderTarget* Target, const Vector4& Color_1, const Vector4& Color_2) noexcept//渐变色画笔缓存
         {
-            const auto HashKey = ((Color_1.Pack() << 32) | Color_2.Pack()) ^ (uintptr_t)Target;//唯一性哈希值
+            const auto HashKey = ((Color_1.Pack() << 32) | Color_2.Pack()) ^ (uint64_t)Target;//唯一性哈希值
             if (CacheGraBrush.find(HashKey) == CacheGraBrush.end())//如果缓存中没有则创建新的渐变画笔
             {
                 if (CacheGraBrush.size() > D2DMaxCache) { for (auto& Pair : CacheGraBrush)if (Pair.second)Pair.second->Release(); CacheGraBrush.clear(); }
@@ -195,21 +191,21 @@ namespace EasyGUI_Direct2D
             const auto HashKey = hash<string>{}(FontName) ^ (hash<int>{}(FontSize) << 1) ^ (hash<int>{}(FontWeight) << 2);//唯一性哈希值
             if (CacheTextFormat.find(HashKey) == CacheTextFormat.end())
             {
-                if (CacheTextFormat.size() > D2DMaxCache / 8) { for (auto& Pair : CacheTextFormat)if (Pair.second)Pair.second->Release(); CacheTextFormat.clear(); }
+                if (CacheTextFormat.size() > D2DMaxCache / 4) { for (auto& Pair : CacheTextFormat)if (Pair.second)Pair.second->Release(); CacheTextFormat.clear(); }
                 WriteFactory->CreateTextFormat(wstring(FontName.begin(), FontName.end()).c_str(), 0, (DWRITE_FONT_WEIGHT)FontWeight, DWRITE_FONT_STYLE_NORMAL, DWRITE_FONT_STRETCH_NORMAL, FontSize, L"", &CacheTextFormat[HashKey]);
             }
             return CacheTextFormat[HashKey];
         }
-        inline IDWriteTextLayout* CacheWriteTextLayout(IDWriteTextFormat* Format, const string& Text, int Limit_X = 0, int Limit_Y = 0, int CodePage = 0) noexcept//文本布局缓存
+        inline IDWriteTextLayout* CacheWriteTextLayout(IDWriteTextFormat* Format, const string& Text, Vector2 Limit = { 0,0 }, int CodePage = 0) noexcept//文本布局缓存
         {
-            if (!Limit_X)Limit_X = 9999; if (!Limit_Y)Limit_Y = 9999;
-            const auto HashKey = hash<string>{}(Text) ^ (hash<void*>{}(Format) << 1) ^ (hash<int>{}(Limit_X) << 2) ^ (hash<int>{}(Limit_Y) << 3);//唯一性哈希值
+            if (!Limit.x)Limit.x = 9999; if (!Limit.y)Limit.y = 9999;
+            const auto HashKey = hash<string>{}(Text) ^ (hash<void*>{}(Format) << 1) ^ (hash<int>{}(Limit.x) << 2) ^ (hash<int>{}(Limit.y) << 3);//唯一性哈希值
             if (CacheTextLayout.find(HashKey) == CacheTextLayout.end())
             {
                 if (CacheTextLayout.size() > D2DMaxCache) { for (auto& Pair : CacheTextLayout)if (Pair.second)Pair.second->Release(); CacheTextLayout.clear(); }
                 const auto TextSize = MultiByteToWideChar(CodePage, 0, Text.c_str(), -1, 0, 0);
                 wstring wText(TextSize - 1, 0); MultiByteToWideChar(CodePage, 0, Text.c_str(), -1, &wText[0], TextSize);
-                WriteFactory->CreateTextLayout(wText.c_str(), (UINT32)wText.length(), Format, Limit_X, Limit_Y, &CacheTextLayout[HashKey]);
+                WriteFactory->CreateTextLayout(wText.c_str(), (UINT32)wText.length(), Format, Limit.x, Limit.y, &CacheTextLayout[HashKey]);
             }
             return CacheTextLayout[HashKey];
         }
@@ -231,9 +227,9 @@ namespace EasyGUI_Direct2D
             if (InputState_ControlWindowShow)return false; Y += 2;
             return EasyGUI_MousePos.x - EasyGUI_WindowPos.left >= X && EasyGUI_MousePos.x - EasyGUI_WindowPos.left <= X + Width && EasyGUI_MousePos.y - EasyGUI_WindowPos.top >= Y && EasyGUI_MousePos.y - EasyGUI_WindowPos.top <= Y + Height;
         }
-        template<class CreateClassName> inline float Animation(float Value, float Speed, long Key = 0) noexcept//快到慢动画
+        template<class CreateClassName> inline float Animation(float Value, float Speed, uint64_t Key = 0) noexcept//快到慢动画
         {
-            static unordered_map<long, double> ReturnValue{}, OldTick{}; if (!ReturnValue.count(Key))ReturnValue[Key] = Value;
+            static unordered_map<uint64_t, double> ReturnValue{}, OldTick{}; if (!ReturnValue.count(Key))ReturnValue[Key] = Value;
             if (Speed <= 1.1f) { ReturnValue[Key] = Value; return ReturnValue[Key]; }//无动画速度时直接赋值并返回
             if (EasyGUI_Tick - OldTick[Key] > 5)//每5毫秒更新一次动画 (控制动画在极快循环速度下依然保持正常速度)
             {
@@ -302,7 +298,7 @@ namespace EasyGUI_Direct2D
             const auto TextFormat = CacheWriteTextFormat(FontName, FontSize, FontWeight);
             if (!TextFormat)return {};//防止字体过小时崩溃
             TextFormat->SetWordWrapping(DWRITE_WORD_WRAPPING_NO_WRAP);//防止自动换行
-            const auto TextLayout = CacheWriteTextLayout(TextFormat, String, StringLimit.x, StringLimit.y, CodePage);
+            const auto TextLayout = CacheWriteTextLayout(TextFormat, String, StringLimit, CodePage);
             DWRITE_TEXT_METRICS Metrics{}; TextLayout->GetMetrics(&Metrics); if (X > 10000)X -= 10000 + Metrics.width / 2; if (Y > 10000)Y -= 10000 + Metrics.height / 2;
             if (X || Y)
             {
@@ -336,6 +332,7 @@ namespace EasyGUI_Direct2D
             Color = Color.Sat(EasyGUI_ColorSat, EasyGUI_ColorGrey);
             const auto TextFormat = CacheWriteTextFormat("Verdana", FontSize, FontWeight);
             if (!TextFormat)return {};//防止字体过小时崩溃
+            TextFormat->SetWordWrapping(DWRITE_WORD_WRAPPING_WRAP);//自动换行
             const auto TextLayout = CacheWriteTextLayout(TextFormat, String, StringLimit.x, StringLimit.y);
             DWRITE_TEXT_METRICS Metrics{}; TextLayout->GetMetrics(&Metrics); if (X > 10000)X -= 10000 + Metrics.width / 2; if (Y > 10000)Y -= 10000 + Metrics.height / 2;
             if (X || Y)
@@ -355,15 +352,15 @@ namespace EasyGUI_Direct2D
             return { (int)Metrics.width,(int)Metrics.height };
         }
         //------------------------------------------------------------------------------------------------------------------------------
-        EasyGUI(string WindowTitle = "EasyGUI", Vector2 WindowSize = { 0,0 }) noexcept//初始化EasyGUI
+        EasyGUI(string WindowTitle = "EasyGUI", Vector2 WindowSize = { 0,0 }, bool TopMost = false) noexcept//初始化EasyGUI
         {
             if (WindowSize.IsZero())return;//兼容无值初始化
             const auto WindowName = wstring(WindowTitle.begin(), WindowTitle.end());//窗口类名
             WNDCLASS WindowClass{}; WindowClass.lpfnWndProc = EasyGUI_WindowProcess; WindowClass.hInstance = GetModuleHandle(0); WindowClass.lpszClassName = WindowName.c_str(); RegisterClass(&WindowClass);//窗口注册类
             while (true)//防止创建失败
             {
-                EasyGUI_WindowHWND = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW, WindowName.c_str(), WindowName.c_str(), WS_POPUP, GetSystemMetrics(0) / 2 - WindowSize.x / 2, GetSystemMetrics(1) / 2 - WindowSize.y / 2, WindowSize.x, WindowSize.y, 0, 0, WindowClass.hInstance, 0); if (!EasyGUI_WindowHWND)continue;
-                EasyGUI_ControlWindowHWND = CreateWindowEx(WS_EX_TOPMOST | WS_EX_LAYERED | WS_EX_TOOLWINDOW, WindowName.c_str(), WindowName.c_str(), WS_POPUP, 0, 0, 0, 0, EasyGUI_WindowHWND, 0, WindowClass.hInstance, 0);
+                EasyGUI_WindowHWND = CreateWindowEx(TopMost ? WS_EX_TOPMOST : 0 | WS_EX_LAYERED, WindowName.c_str(), WindowName.c_str(), WS_POPUP, GetSystemMetrics(0) / 2 - WindowSize.x / 2, GetSystemMetrics(1) / 2 - WindowSize.y / 2, WindowSize.x, WindowSize.y, 0, 0, WindowClass.hInstance, 0);
+                EasyGUI_ControlWindowHWND = CreateWindowEx(TopMost ? WS_EX_TOPMOST : 0 | WS_EX_LAYERED, WindowName.c_str(), WindowName.c_str(), WS_POPUP, 0, 0, 0, 0, EasyGUI_WindowHWND, 0, WindowClass.hInstance, 0);
                 //---------------------------------------------------------------------------------------------------
                 ShowWindow(EasyGUI_WindowHWND, SW_SHOW); SetForegroundWindow(EasyGUI_WindowHWND); UpdateWindow(EasyGUI_WindowHWND);//显示窗口
                 SetLayeredWindowAttributes(EasyGUI_WindowHWND, 0, EasyGUI_Alpha, LWA_ALPHA);//设置窗口透明度
@@ -398,7 +395,12 @@ namespace EasyGUI_Direct2D
         }
         inline void Release() noexcept//释放全部资源
         {
-            SafeRelease(EasyGUI_RenderTarget); SafeRelease(EasyGUI_ControlRenderTarget);
+            for (auto& Pair : CacheBitmap)if (Pair.second)Pair.second->Release(); CacheBitmap.clear();
+            for (auto& Pair : CacheBrush)if (Pair.second)Pair.second->Release(); CacheBrush.clear();
+            for (auto& Pair : CacheGraBrush)if (Pair.second)Pair.second->Release(); CacheGraBrush.clear();
+            for (auto& Pair : CacheTextFormat)if (Pair.second)Pair.second->Release(); CacheTextFormat.clear();
+            for (auto& Pair : CacheTextLayout)if (Pair.second)Pair.second->Release(); CacheTextLayout.clear();
+            SafeRelease(EasyGUI_RenderTarget); SafeRelease(EasyGUI_ControlRenderTarget); SafeRelease(WriteFactory);
             DestroyWindow(EasyGUI_WindowHWND); DestroyWindow(EasyGUI_ControlWindowHWND);
             EasyGUI_WindowHWND = 0; EasyGUI_ControlWindowHWND = 0;
         }
@@ -419,7 +421,7 @@ namespace EasyGUI_Direct2D
         inline Vector2 Window_GetPos() noexcept//获取窗口坐标
         {
             RECT WindowRect{}; GetWindowRect(EasyGUI_WindowHWND, &WindowRect);
-            return { WindowRect.left ,WindowRect.top };
+            return { WindowRect.left,WindowRect.top };
         }
         inline void Window_SetPos(Vector2 WindowPos) noexcept//修改窗口坐标
         {
@@ -495,9 +497,9 @@ namespace EasyGUI_Direct2D
                 if (Block.Start < 0)Block.Start = 0; else if (Block.Line > Height && Block.Start > Block.Line - Height)Block.Start = Block.Line - Height;//限制滚动区域
             }
             int ScrollBar = 0; if (Block.Line > Height)ScrollBar = Block.Line;//右侧滚动条绘制判断
-            Block.IsInScrollArea = false; Block.Line = 30; Block.Offset = 0; Block.Target = CreateBitmapRenderTarget(EasyGUI_RenderTarget, { Width,Height * 10 }, Block.ID); if (!Block.Bitmap)Block.Target->GetBitmap(&Block.Bitmap);//创建区块渲染目标
+            Block.IsInScrollArea = false; Block.Line = 30; Block.Offset = 0; Block.Target = CreateBitmapRenderTarget(EasyGUI_RenderTarget, { Width,Height * 10 }, Block.ID);//创建区块渲染目标
             Render_Rect(EasyGUI_RenderTarget, X, Y, Width, Height, { 0,0,0 });//黑色外边框
-            Render_Rect(EasyGUI_RenderTarget, X + 1, Y + 1, Width - 2, Height - 2, { 60,60,60 });//白色外边框
+            Render_Rect(EasyGUI_RenderTarget, X + 1, Y + 1, Width - 2, Height - 2, EasyGUI_Color.Alpha(255) / 3);//外边框
             Render_GradientRect(EasyGUI_RenderTarget, X + 2, Y + 2, Width - 4, Height - 4, { 10,10,10 }, EasyGUI_Color / 10, true);//渐变背景
             if (!BlockTitle.empty())
             {
@@ -506,7 +508,7 @@ namespace EasyGUI_Direct2D
             }
             Y += 2; Height -= 4;
             const auto PaintStartPos = Animation<class EasyGUI_Block_ScroolAni>(Block.Start, EasyGUI_AnimationSmooth * 0.7f, Block.ID);//滑动动画
-            EasyGUI_RenderTarget->DrawBitmap(Block.Bitmap, D2D1::RectF(X, Y, X + Width, Y + Height), 1, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1::RectF(0, PaintStartPos, Width, PaintStartPos + Height));
+            ID2D1Bitmap* BlockBitmap{}; Block.Target->GetBitmap(&BlockBitmap); EasyGUI_RenderTarget->DrawBitmap(BlockBitmap, D2D1::RectF(X, Y, X + Width, Y + Height), 1, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, D2D1::RectF(0, PaintStartPos, Width, PaintStartPos + Height)); SafeRelease(BlockBitmap);
             Block.Target->BeginDraw(); Block.Target->Clear(D2DCol({ 0,0,0,0 }));
             Y -= 2; Height += 4;
             Render_GradientRect(EasyGUI_RenderTarget, X + 2, Y + 2, Width - 4, 20, { 10,10,10,200 }, { 10,10,10,0 }, true);//顶部遮罩
@@ -523,7 +525,7 @@ namespace EasyGUI_Direct2D
             if (BlockPage < 0)BlockPage = 0; else if (BlockPage >= BlockText.size())BlockPage = BlockText.size() - 1;//范围限制
             if (MouseJudgment(X, Y, Width, Height))InputState_InBlock = true;//鼠标在区块内
             Render_Rect(EasyGUI_RenderTarget, X, Y, Width, Height, { 0,0,0 });//黑色外边框
-            Render_Rect(EasyGUI_RenderTarget, X + 1, Y + 1, Width - 2, Height - 2, { 60,60,60 });//白色外边框
+            Render_Rect(EasyGUI_RenderTarget, X + 1, Y + 1, Width - 2, Height - 2, EasyGUI_Color.Alpha(255) / 3);//外边框
             Render_GradientRect(EasyGUI_RenderTarget, X + 2, Y + 2, Width - 4, Height - 4, EasyGUI_Color / 10, { 10,10,10 }, true);//主题色渐变背景
             if (!BlockTitle.empty())
             {
@@ -550,7 +552,7 @@ namespace EasyGUI_Direct2D
         }
         inline void GUI_Line(EasyGUI_Block& Block, int Y_Offset = 0) noexcept//分割线
         {
-            Render_Rect(Block.Target, 25, Block.Line + Y_Offset, Block.Size.x - 50, 1, { 60,60,60 }); Block.Line += 20;
+            Render_Rect(Block.Target, 25, Block.Line + Y_Offset, Block.Size.x - 50, 1, EasyGUI_Color.Alpha(255) / 3); Block.Line += 20;
         }
         inline void GUI_Checkbox(EasyGUI_Block& Block, const string& Text, bool& CheckboxValue) noexcept//单选框
         {
@@ -571,8 +573,8 @@ namespace EasyGUI_Direct2D
             const auto DetectMousePos = MouseJudgment(Block.Pos.x + ButtonPos.x, Block.Pos.y - Block.Start + ButtonPos.y, ButtonSize.x, ButtonSize.y);//窗口检测机制
             const auto IsPressed = InputState_IsWindShow && Block.IsInBlock && DetectMousePos && KeyEvent(VK_LBUTTON, true);//是否按下按钮
             Render_Rect(Block.Target, ButtonPos.x, ButtonPos.y, ButtonSize.x, ButtonSize.y, { 0,0,0 });
-            Render_Rect(Block.Target, ButtonPos.x + 1, ButtonPos.y + 1, ButtonSize.x - 2, ButtonSize.y - 2, { 60,60,60 });
-            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / Animation<class EasyGUI_Button_DetMouAni>(DetectMousePos ? 6 : 8, EasyGUI_AnimationSmooth, Block.ID + Block.Line), { 20,20,20 }, true);
+            Render_Rect(Block.Target, ButtonPos.x + 1, ButtonPos.y + 1, ButtonSize.x - 2, ButtonSize.y - 2, EasyGUI_Color.Alpha(255) / Animation<class EasyGUI_Button_DetMouAni>(DetectMousePos ? 2 : 3, EasyGUI_AnimationSmooth, Block.ID + Block.Line));
+            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / 8, { 20,20,20 }, true);
             Render_Rect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color.Alpha(Animation<class EasyGUI_Button_PressEffAni>(IsPressed ? 40 : 0, IsPressed ? 0 : EasyGUI_AnimationSmooth * 1.5f, Block.ID + Block.Line)));//按下动画
             Render_String(Block.Target, 10000 + ButtonPos.x + ButtonSize.x / 2, 10000 + Block.Line, Text, { 180,180,180 }, EasyGUI_Font, EasyGUI_FontSize, 600);
             Block.Line += 26;
@@ -591,9 +593,9 @@ namespace EasyGUI_Direct2D
             }
             else PressTime[Block.ID + Block.Line] = 0;//重置计时器
             Render_Rect(Block.Target, ButtonPos.x, ButtonPos.y, ButtonSize.x, ButtonSize.y, { 0,0,0 });
-            Render_Rect(Block.Target, ButtonPos.x + 1, ButtonPos.y + 1, ButtonSize.x - 2, ButtonSize.y - 2, { 60,60,60 });
-            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / Animation<class EasyGUI_LongPressButton_DetMouAni>(DetectMousePos ? 6 : 8, EasyGUI_AnimationSmooth, Block.ID + Block.Line), { 20,20,20 }, true);
-            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, (ButtonSize.x - 4) * PressTime[Block.ID + Block.Line], ButtonSize.y - 4, { 0,0,0,0 }, EasyGUI_Color / 1.5, false);//触发进度条
+            Render_Rect(Block.Target, ButtonPos.x + 1, ButtonPos.y + 1, ButtonSize.x - 2, ButtonSize.y - 2, EasyGUI_Color.Alpha(255) / Animation<class EasyGUI_LongPressButton_DetMouAni>(DetectMousePos ? 2 : 3, EasyGUI_AnimationSmooth, Block.ID + Block.Line));
+            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / 8, { 20,20,20 }, true);
+            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, (ButtonSize.x - 4) * PressTime[Block.ID + Block.Line], ButtonSize.y - 4, { 0,0,0,0 }, EasyGUI_Color.Alpha(80), false);//触发进度条
             Render_Rect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color.Alpha(Animation<class EasyGUI_LongPressButton_PressEffAni>(IsPressed ? 40 : 0, IsPressed ? 0 : EasyGUI_AnimationSmooth * 1.5f, Block.ID + Block.Line)));//按下动画
             Render_String(Block.Target, 10000 + ButtonPos.x + ButtonSize.x / 2, 10000 + Block.Line, "*" + Text + "*", { 180,180,180 }, EasyGUI_Font, EasyGUI_FontSize, 600);
             Block.Line += 26;
@@ -605,8 +607,8 @@ namespace EasyGUI_Direct2D
             const auto DetectMousePos = MouseJudgment(Block.Pos.x + ButtonPos.x, Block.Pos.y - Block.Start + ButtonPos.y, ButtonSize.x, ButtonSize.y);//窗口检测机制
             const auto IsPressed = InputState_IsWindShow && Block.IsInBlock && DetectMousePos && KeyEvent(VK_LBUTTON, true);//是否按下按钮
             Render_Rect(Block.Target, ButtonPos.x, ButtonPos.y, ButtonSize.x, ButtonSize.y, { 0,0,0 });
-            Render_Rect(Block.Target, ButtonPos.x + 1, ButtonPos.y + 1, ButtonSize.x - 2, ButtonSize.y - 2, { 60,60,60 });
-            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / Animation<class EasyGUI_MiniButton_DetMouAni>(DetectMousePos ? 6 : 8, EasyGUI_AnimationSmooth, Block.ID + Block.Line), { 20,20,20 }, true);
+            Render_Rect(Block.Target, ButtonPos.x + 1, ButtonPos.y + 1, ButtonSize.x - 2, ButtonSize.y - 2, EasyGUI_Color.Alpha(255) / Animation<class EasyGUI_MiniButton_DetMouAni>(DetectMousePos ? 2 : 3, EasyGUI_AnimationSmooth, Block.ID + Block.Line));
+            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color / 8, { 20,20,20 }, true);
             Render_Rect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, EasyGUI_Color.Alpha(Animation<class EasyGUI_MiniButton_PressEffAni>(IsPressed ? 40 : 0, IsPressed ? 0 : EasyGUI_AnimationSmooth * 1.5f, Block.ID + Block.Line)));//按下动画
             Render_String(Block.Target, 10000 + ButtonPos.x + ButtonSize.x / 2 + 1, 10000 + Block.Line, Text, { 180,180,180 }, EasyGUI_Font, EasyGUI_FontSize - 3);
             return IsPressed;
@@ -620,28 +622,33 @@ namespace EasyGUI_Direct2D
             {
                 if (DetectMousePos && Block.IsInBlock)//当鼠标移动到滑条上方 按键反馈事件
                 {
-                    if (KeyEvent(VK_LEFT, true) || KeyEvent(VK_UP, true)) { if ((ValueClass)0.1 == 0)SliderValue--; else SliderValue -= 0.05; }//检测是否是浮点值
-                    else if (KeyEvent(VK_RIGHT, true) || KeyEvent(VK_DOWN, true)) { if ((ValueClass)0.1 == 0)SliderValue++; else SliderValue += 0.05; }
-                    if (KeyEvent(VK_LBUTTON) && !OutSide[Block.ID + Block.Line])OutSide[Block.ID + Block.Line] = true;
+                    ValueClass ChangeValue = abs(EndValue - StartValue) / 30; if (!(ValueClass)0.1f && ChangeValue < 1)ChangeValue = 1;
+                    if (KeyEvent(VK_RIGHT, true) || KeyEvent(VK_DOWN, true))SliderValue += ChangeValue; else if (KeyEvent(VK_LEFT, true) || KeyEvent(VK_UP, true))SliderValue -= ChangeValue;//快捷键调整数值
+                    if (KeyEvent(VK_LBUTTON) && !OutSide[Block.ID + Block.Line])OutSide[Block.ID + Block.Line] = true;//防止脱落造成失控
                     Block.IsInScrollArea = true;//禁止区块滑动
                 }
-                if (OutSide[Block.ID + Block.Line] && KeyEvent(VK_LBUTTON)) { SliderValue = ((EasyGUI_MousePos.x - Block.Pos.x - EasyGUI_WindowPos.left - NormalSliderPos.x) * (EndValue - StartValue) / NormalSliderSize.x) + StartValue; InputState_IsSlider = true; }
-                else if (!KeyEvent(VK_LBUTTON)) { OutSide[Block.ID + Block.Line] = false; InputState_IsSlider = false; }
+                if (OutSide[Block.ID + Block.Line] && KeyEvent(VK_LBUTTON))
+                {
+                    SliderValue = ((EasyGUI_MousePos.x - Block.Pos.x - EasyGUI_WindowPos.left - NormalSliderPos.x) * (EndValue - StartValue) / NormalSliderSize.x) + StartValue;//鼠标坐标转换为数值
+                    if (abs(EndValue - StartValue) >= 2.f) { const auto Near = roundf(SliderValue); if (abs(SliderValue - Near) < 0.05f)SliderValue = Near; }//接近整数时吸附整数
+                    InputState_IsSlider = true;//正在拖动滑条
+                }
+                else if (!KeyEvent(VK_LBUTTON)) { OutSide[Block.ID + Block.Line] = false; InputState_IsSlider = false; }//松开鼠标后重置状态
                 if (SliderValue < StartValue)SliderValue = StartValue; else if (SliderValue > EndValue)SliderValue = EndValue;//值范围限制
             }
             int SliderSize = (float)(SliderValue - StartValue) / (float)(EndValue - StartValue) * NormalSliderSize.x; if (SliderSize < 0)SliderSize = 0; else if (SliderSize > NormalSliderSize.x - 2)SliderSize = NormalSliderSize.x - 2;//滑条长度计算
-            const int SliderAni = Animation<class EasyGUI_Slider_SizeAni>(SliderSize, EasyGUI_AnimationSmooth * 0.7, Block.ID + Block.Line);//滑条动画
+            const int SliderAni = Animation<class EasyGUI_Slider_SizeAni>(SliderSize, EasyGUI_AnimationSmooth * 0.7f, Block.ID + Block.Line);//滑条动画
             std::stringstream FloatPre{}; FloatPre << std::fixed << std::setprecision(3) << SliderValue;//保留小数点后数
-            if (Unit != "")//数值单位
+            if (!Unit.empty())//数值单位
             {
-                if (Unit.find("%delete") != string::npos)Unit.erase(Unit.find("%delete"), ((string)"%delete").length());//删除掉全部字符串
+                if (Unit.find("%delete") != string::npos)Unit.erase(Unit.find("%delete"), ((string)"%delete").length());//删除掉数值字符串
                 else if (Unit.find("%string") != string::npos)Unit.replace(Unit.find("%string"), ((string)"%string").length(), FloatPre.str());//替换掉原本字符串
                 else Unit = FloatPre.str() + Unit;//不存在特殊字符串时
             }
             else Unit = FloatPre.str();
             Render_String(Block.Target, NormalSliderPos.x, 10000 + NormalSliderPos.y - 8, Text, { 200,200,200 }, EasyGUI_Font, EasyGUI_FontSize);
             Render_Rect(Block.Target, NormalSliderPos.x, NormalSliderPos.y, NormalSliderSize.x, NormalSliderSize.y, { 0,0,0 });//黑色外边框
-            Render_GradientRect(Block.Target, NormalSliderPos.x + 1, NormalSliderPos.y + 1, NormalSliderSize.x - 2, NormalSliderSize.y - 2, { 25,25,25 }, EasyGUI_Color / Animation<class EasyGUI_Slider_DetMouAni>((DetectMousePos || OutSide[Block.ID + Block.Line]) ? 5 : 6, EasyGUI_AnimationSmooth, Block.ID + Block.Line), true);//滑条背景
+            Render_GradientRect(Block.Target, NormalSliderPos.x + 1, NormalSliderPos.y + 1, NormalSliderSize.x - 2, NormalSliderSize.y - 2, { 20,20,20 }, EasyGUI_Color / Animation<class EasyGUI_Slider_DetMouAni>((DetectMousePos || OutSide[Block.ID + Block.Line]) ? 5 : 6, EasyGUI_AnimationSmooth, Block.ID + Block.Line), true);//滑条背景
             Render_GradientRect(Block.Target, NormalSliderPos.x + 1, NormalSliderPos.y + 1, SliderAni, NormalSliderSize.y - 2, EasyGUI_Color, EasyGUI_Color / 4, true);//滑条
             Render_MiniString(Block.Target, 10000 + NormalSliderPos.x + SliderAni, NormalSliderPos.y + 1, Unit + "<DIM>", { 200,200,200 });//居中返回值绘制
             Block.Line += 30;
@@ -828,7 +835,7 @@ namespace EasyGUI_Direct2D
                     if (!InputValue.empty() && MouseJudgment(Block.Pos.x + ButtonPos.x + ButtonSize.x - 25, Block.Pos.y - Block.Start + ButtonPos.y + 3, 20, ButtonSize.y - 6))//鼠标坐标在X上方
                     {
                         EasyGUI_MouseIcon = IDC_HAND;//清除文字鼠标图标
-                        if (InputValue != "" && KeyEvent(VK_LBUTTON, true))InputValue = "";//清除全部内容
+                        if (!InputValue.empty() && KeyEvent(VK_LBUTTON, true))InputValue = "";//清除全部内容
                     }
                     else if (DetectMousePos)EasyGUI_MouseIcon = IDC_IBEAM;//输入框鼠标图标
                     if (!IsInput[Block.ID + Block.Line] && DetectMousePos && KeyEvent(VK_LBUTTON, true))IsInput[Block.ID + Block.Line] = true;//进入输入状态
@@ -942,12 +949,12 @@ namespace EasyGUI_Direct2D
                 }
             }
             Render_Rect(Block.Target, ButtonPos.x, ButtonPos.y, ButtonSize.x, ButtonSize.y, { 0,0,0 });
-            Render_Rect(Block.Target, ButtonPos.x + 1, ButtonPos.y + 1, ButtonSize.x - 2, ButtonSize.y - 2, { 60,60,60 });
-            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, { 15,15,15 }, EasyGUI_Color / Animation<class EasyGUI_InputText_DetMouAni>((DetectMousePos || IsInput[Block.ID + Block.Line]) ? 7 : 8, EasyGUI_AnimationSmooth, Block.ID + Block.Line), true);
-            if (!IsInput[Block.ID + Block.Line] && InputValue.empty())Render_String(Block.Target, ButtonPos.x + 10, 10000 + ButtonPos.y + 13, DefaultText + "<NOSHADOW>", EasyGUI_Color.Min_Bri(170) / 4, EasyGUI_Font, EasyGUI_FontSize, 400, { ButtonSize.x - 40 });//默认显示文字
+            Render_Rect(Block.Target, ButtonPos.x + 1, ButtonPos.y + 1, ButtonSize.x - 2, ButtonSize.y - 2, EasyGUI_Color.Alpha(255) / Animation<class EasyGUI_InputText_DetMouAni>(DetectMousePos || IsInput[Block.ID + Block.Line] ? 2 : 3, EasyGUI_AnimationSmooth, Block.ID + Block.Line));
+            Render_GradientRect(Block.Target, ButtonPos.x + 2, ButtonPos.y + 2, ButtonSize.x - 4, ButtonSize.y - 4, { 18,18,18 }, EasyGUI_Color / 8, true);
+            if (!IsInput[Block.ID + Block.Line] && InputValue.empty())Render_String(Block.Target, ButtonPos.x + 10, 10000 + ButtonPos.y + 13, DefaultText + "<NOSHADOW>", EasyGUI_Color.Min_Bri(160) / 4, EasyGUI_Font, EasyGUI_FontSize, 400, { ButtonSize.x - 40 });//默认显示文字
             else {
                 Render_String(Block.Target, ButtonPos.x + 10, 10000 + ButtonPos.y + 13, DrawString, { 200,200,200 }, EasyGUI_Font, EasyGUI_FontSize, 400, { ButtonSize.x - 40 });//已输入的文字
-                if (InputValue != "")Render_MiniString(Block.Target, ButtonPos.x + 10 + ButtonSize.x - 28, 10000 + ButtonPos.y + 14, "X", { 60,60,60 }, 15, 400);//删除全部字符叉叉
+                if (!InputValue.empty())Render_MiniString(Block.Target, ButtonPos.x + 10 + ButtonSize.x - 28, 10000 + ButtonPos.y + 14, "X", { 60,60,60 }, 15, 400);//删除全部字符叉叉
             }
             Block.Line += 27;
         }
@@ -963,12 +970,69 @@ namespace EasyGUI_Direct2D
                 const auto StringSize = Render_MiniString(EasyGUI_RenderTarget, 0, 0, Text, {}, EasyGUI_FontSize - 1, 600, { Block.Size.x - 55,0 }) + Vector2{ 12, 11 };//提示框大小
                 const auto TipRectPos = Vector2{ Block.Pos.x + 35 + Block.Offset, Block.Pos.y + Block.Line - Block.Start };//提示框位置
                 Render_Rect(EasyGUI_RenderTarget, TipRectPos.x, TipRectPos.y, StringSize.x, StringSize.y, { 0,0,0,int(TipBoxAni * 255) });
-                Render_Rect(EasyGUI_RenderTarget, TipRectPos.x + 1, TipRectPos.y + 1, StringSize.x - 2, StringSize.y - 2, { 60,60,60,int(TipBoxAni * 255) });
+                Render_Rect(EasyGUI_RenderTarget, TipRectPos.x + 1, TipRectPos.y + 1, StringSize.x - 2, StringSize.y - 2, EasyGUI_Color.Alpha(TipBoxAni * 255) / 3);
                 Render_GradientRect(EasyGUI_RenderTarget, TipRectPos.x + 2, TipRectPos.y + 2, StringSize.x - 4, StringSize.y - 4, EasyGUI_Color.Alpha(TipBoxAni * 255) / 15, EasyGUI_Color.Alpha(TipBoxAni * 255) / 10, true);
                 Render_MiniString(EasyGUI_RenderTarget, TipRectPos.x + 5, TipRectPos.y + 5, Text, { 200,200,200,int(TipBoxAni * 255) }, EasyGUI_FontSize - 1, 600, { Block.Size.x - 55,0 });
             }
         }
-        inline void GUI_ColorSelector(EasyGUI_Block& Block, Vector4& ColorValue, int Offset = 0) noexcept//颜色选择器
+        inline void GUI_ColorSelector3(EasyGUI_Block& Block, Vector4& ColorValue, int Offset = 0) noexcept//颜色选择器
+        {
+            const Vector2 ColorRectPos = { Block.Size.x - 43 - Offset,Block.Line - 6 }, ColorPickerSize = { 200, 75 };//颜色预览框位置,颜色选择器大小
+            static unordered_map<long, bool> OpenColorPicker{};//颜色选择器开关
+            static unordered_map<long, Vector4> BaseColor{};//基础颜色值备份
+            if (Block.IsInBlock && InputState_IsWindShow && !InputState_ControlWindowShow && MouseJudgment(Block.Pos.x + ColorRectPos.x, Block.Pos.y - Block.Start + ColorRectPos.y, 20, 12))
+            {
+                EasyGUI_MouseIcon = IDC_HAND;//手型鼠标图标
+                if (!OpenColorPicker[Block.ID + Block.Line + Offset * 10000] && KeyEvent(VK_LBUTTON, true))//打开颜色选择器
+                {
+                    BaseColor[Block.ID + Block.Line + Offset * 10000] = ColorValue.Alpha(255);
+                    OpenColorPicker[Block.ID + Block.Line + Offset * 10000] = true;
+                    InputState_ControlWindowShow = true;
+                    MoveControlWindow(EasyGUI_MousePos.x + 20, EasyGUI_MousePos.y + 20, ColorPickerSize.x, ColorPickerSize.y, 255);
+                }
+            }
+            if (OpenColorPicker[Block.ID + Block.Line + Offset * 10000])//颜色选择器打开时
+            {
+                if (!InputState_ControlWindowShow)OpenColorPicker[Block.ID + Block.Line + Offset * 10000] = false;//当控制窗口关闭时关闭颜色选择器
+                const bool SelectBar_1 = EasyGUI_MousePos.x - EasyGUI_ControlWindowPos.left > 5 && EasyGUI_MousePos.x - EasyGUI_ControlWindowPos.left < 5 + ColorPickerSize.x - 10 - 1 && EasyGUI_MousePos.y - EasyGUI_ControlWindowPos.top > 5 && EasyGUI_MousePos.y - EasyGUI_ControlWindowPos.top < 5 + 18,
+                    SelectBar_2 = EasyGUI_MousePos.x - EasyGUI_ControlWindowPos.left > 5 && EasyGUI_MousePos.x - EasyGUI_ControlWindowPos.left < 5 + ColorPickerSize.x - 10 - 1 && EasyGUI_MousePos.y - EasyGUI_ControlWindowPos.top > 5 + 25 && EasyGUI_MousePos.y - EasyGUI_ControlWindowPos.top < 5 + 25 + 18;
+                if (InputState_ControlWindowShow && KeyEvent(VK_LBUTTON))
+                {
+                    InputState_IsSlider = true;
+                    static const auto Window_HDC = GetDC(EasyGUI_ControlWindowHWND);//获取窗口HDC (极高开销)
+                    const auto Pixel = GetPixel(Window_HDC, EasyGUI_MousePos.x - EasyGUI_ControlWindowPos.left, EasyGUI_MousePos.y - EasyGUI_ControlWindowPos.top);
+                    const Vector4 MouseColor = { GetRValue(Pixel),GetGValue(Pixel),GetBValue(Pixel),255 };
+                    if (MouseColor.Alpha(255) != Vector4{ 0, 0, 1 })
+                    {
+                        if (SelectBar_1) { BaseColor[Block.ID + Block.Line + Offset * 10000] = MouseColor; ColorValue = MouseColor; }
+                        else if (SelectBar_2)ColorValue = MouseColor;
+                    }
+                }
+                else InputState_IsSlider = false;
+                Render_Rect(EasyGUI_ControlRenderTarget, 0, 0, ColorPickerSize.x, ColorPickerSize.y, { 0,0,0 });
+                Render_Rect(EasyGUI_ControlRenderTarget, 1, 1, ColorPickerSize.x - 2, ColorPickerSize.y - 2, EasyGUI_Color.Alpha(255) / 3);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 2, 2, ColorPickerSize.x - 4, ColorPickerSize.y - 4, EasyGUI_Color / 15, EasyGUI_Color / 10, true);
+                Render_Rect(EasyGUI_ControlRenderTarget, 8, 5, ColorPickerSize.x - 16, 20, { 0,0,0 }, true, 0);//彩虹颜色条
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 0, 6, 32, 18, { 255,0,0 }, { 255,255,0 }, false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 1, 6, 32, 18, { 255,255,0 }, { 0,255,0 }, false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 2, 6, 32, 18, { 0,255,0 }, { 0,255,255 }, false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 3, 6, 32, 18, { 0,255,255 }, { 0,0,255 }, false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 4, 6, 32, 18, { 0,0,255 }, { 255,0,255 }, false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 5, 6, 32 - 4, 18, { 255,0,255 }, { 255,0,0 }, false, false, 0);
+                Render_Rect(EasyGUI_ControlRenderTarget, 5, 5 + 25, ColorPickerSize.x - 10, 20, { 0,0,0 }, true, 0);//明暗颜色条
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6, 6 + 25, (ColorPickerSize.x - 10) / 2, 18, { 0,0,0 }, BaseColor[Block.ID + Block.Line + Offset * 10000].Alpha(255), false, false, 0);
+                Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + (ColorPickerSize.x - 10) / 2, 6 + 25, (ColorPickerSize.x - 10) / 2 - 2, 18, BaseColor[Block.ID + Block.Line + Offset * 10000].Alpha(255), { 255,255,255 }, false, false, 0);
+                Render_String(EasyGUI_ControlRenderTarget, 10000 + ColorPickerSize.x / 2, 10000 + 6 + 50 + 5, "(R:" + to_string(ColorValue.r) + ")(G:" + to_string(ColorValue.g) + ")(B:" + to_string(ColorValue.b) + ")", ColorValue.Min_Bri(100).Max_Bri(220).Alpha(255), EasyGUI_Font, EasyGUI_FontSize, 500);//颜色字符串
+                if (KeyEvent(VK_LBUTTON))//绘制选择标识
+                {
+                    if (SelectBar_1)Render_Rect(EasyGUI_ControlRenderTarget, EasyGUI_MousePos.x - EasyGUI_ControlWindowPos.left + 1, 6, 1, 18, { 0,0,1 }, false, 0);
+                    else if (SelectBar_2)Render_Rect(EasyGUI_ControlRenderTarget, EasyGUI_MousePos.x - EasyGUI_ControlWindowPos.left + 1, 6 + 25, 1, 18, { 0,0,1 }, false, 0);
+                }
+            }
+            Render_Rect(Block.Target, ColorRectPos.x, ColorRectPos.y, 20, 12, { 0,0,0 });//黑色边框
+            Render_GradientRect(Block.Target, ColorRectPos.x + 1, ColorRectPos.y + 1, 18, 10, ColorValue.Alpha(255), ColorValue.Alpha(255) / 3, true, false);//颜色预览框
+        }
+        inline void GUI_ColorSelector4(EasyGUI_Block& Block, Vector4& ColorValue, int Offset = 0) noexcept//颜色选择器
         {
             auto DrawCheckerboard = [&](ID2D1RenderTarget* Target, int X, int Y, int Width, int Height) {//绘制棋盘格背景
                 for (int i = 0; i < Height; i += 2)for (int j = 0; j < Width; j += 2)
@@ -1010,7 +1074,7 @@ namespace EasyGUI_Direct2D
                 }
                 else InputState_IsSlider = false;
                 Render_Rect(EasyGUI_ControlRenderTarget, 0, 0, ColorPickerSize.x, ColorPickerSize.y, { 0,0,0 });
-                Render_Rect(EasyGUI_ControlRenderTarget, 1, 1, ColorPickerSize.x - 2, ColorPickerSize.y - 2, { 60,60,60 });
+                Render_Rect(EasyGUI_ControlRenderTarget, 1, 1, ColorPickerSize.x - 2, ColorPickerSize.y - 2, EasyGUI_Color.Alpha(255) / 3);
                 Render_GradientRect(EasyGUI_ControlRenderTarget, 2, 2, ColorPickerSize.x - 4, ColorPickerSize.y - 4, EasyGUI_Color / 15, EasyGUI_Color / 10, true);
                 Render_Rect(EasyGUI_ControlRenderTarget, 8, 5, ColorPickerSize.x - 16, 20, { 0,0,0 }, true, 0);//彩虹颜色条
                 Render_GradientRect(EasyGUI_ControlRenderTarget, 6 + 32 * 0, 6, 32, 18, { 255,0,0 }, { 255,255,0 }, false, false, 0);
@@ -1090,7 +1154,7 @@ namespace EasyGUI_Direct2D
                         if (KeyEvent(VK_LBUTTON, true)) { SelectValue = i; InputState_ControlWindowShow = false; } SelectAlpha = 255;
                     }
                     const auto SelectAniAlpha = Animation<class EasyGUI_Combobox_SelectAni>(SelectAlpha, EasyGUI_AnimationSmooth, i);
-                    Render_GradientRect(EasyGUI_ControlRenderTarget, 1, Pos_Y, ComboboxWindowSize.x - 2, PosHeight, EasyGUI_Color.Alpha(SelectAniAlpha) / 6, Vector4{ 20,20,20 }.Alpha(SelectAniAlpha), true);
+                    Render_GradientRect(EasyGUI_ControlRenderTarget, 1, Pos_Y, ComboboxWindowSize.x - 2, PosHeight, EasyGUI_Color.Alpha(SelectAniAlpha / 10), EasyGUI_Color.Alpha(SelectAniAlpha / 50), true);
                     if (SelectValue == i)Render_String(EasyGUI_ControlRenderTarget, 10, 10000 + Pos_Y + PosHeight / 2, ComboText[i], EasyGUI_Color, EasyGUI_Font, EasyGUI_FontSize, 600, { ComboboxSize.x - 20 });
                     else Render_String(EasyGUI_ControlRenderTarget, 10, 10000 + Pos_Y + PosHeight / 2, ComboText[i], { 200,200,200 }, EasyGUI_Font, EasyGUI_FontSize, 400, { ComboboxSize.x - 20 });
                 }
@@ -1098,8 +1162,7 @@ namespace EasyGUI_Direct2D
             Render_Rect(Block.Target, ComboboxPos.x, ComboboxPos.y, ComboboxSize.x, ComboboxSize.y, { 0,0,0 });
             Render_GradientRect(Block.Target, ComboboxPos.x + 1, ComboboxPos.y + 1, ComboboxSize.x - 2, ComboboxSize.y - 2, { 20,20,20 }, EasyGUI_Color / Animation<class EasyGUI_Combobox_DetMouAni>((DetectMousePos || IsOpen[Block.ID + Block.Line]) ? 6 : 7, EasyGUI_AnimationSmooth, Block.ID + Block.Line), true);
             Render_String(Block.Target, ComboboxPos.x + 10, 10000 + ComboboxPos.y + 13, ComboText[SelectValue], { 200,200,200 }, EasyGUI_Font, EasyGUI_FontSize, 400, { ComboboxSize.x - 35 });
-            if (IsOpen[Block.ID + Block.Line])Render_MiniString(Block.Target, ComboboxPos.x + 10 + ComboboxSize.x - 25, 10000 + Block.Line + 1, "▲", { 200,200,200 }, 9, 400);
-            else Render_MiniString(Block.Target, ComboboxPos.x + 10 + ComboboxSize.x - 25, 10000 + Block.Line + 1, "▼", { 200,200,200 }, 9, 400);
+            Render_MiniString(Block.Target, ComboboxPos.x + 10 + ComboboxSize.x - 25, 10000 + Block.Line + 1, IsOpen[Block.ID + Block.Line] ? "▲" : "▼", { 200,200,200 }, 9, 400);
             Block.Line += 25;
         }
         inline void GUI_MultiCombobox(EasyGUI_Block& Block, const vector<string>& ComboText, vector<bool>& SelectValue) noexcept//多选组合框
@@ -1125,7 +1188,7 @@ namespace EasyGUI_Direct2D
                         if (KeyEvent(VK_LBUTTON, true))SelectValue[i] = !SelectValue[i]; SelectAlpha = 255;
                     }
                     const auto SelectAniAlpha = Animation<class EasyGUI_MultiCombobox_SelectAni>(SelectAlpha, EasyGUI_AnimationSmooth, i);
-                    Render_GradientRect(EasyGUI_ControlRenderTarget, 1, Pos_Y, ComboboxWindowSize.x - 2, PosHeight, EasyGUI_Color.Alpha(SelectAniAlpha) / 6, Vector4{ 20,20,20 }.Alpha(SelectAniAlpha), true);
+                    Render_GradientRect(EasyGUI_ControlRenderTarget, 1, Pos_Y, ComboboxWindowSize.x - 2, PosHeight, EasyGUI_Color.Alpha(SelectAniAlpha / 10), EasyGUI_Color.Alpha(SelectAniAlpha / 50), true);
                     if (SelectValue[i])Render_String(EasyGUI_ControlRenderTarget, 10, 10000 + Pos_Y + PosHeight / 2, ComboText[i], EasyGUI_Color, EasyGUI_Font, EasyGUI_FontSize, 600, { ComboboxSize.x - 20 });
                     else Render_String(EasyGUI_ControlRenderTarget, 10, 10000 + Pos_Y + PosHeight / 2, ComboText[i], { 200,200,200 }, EasyGUI_Font, EasyGUI_FontSize, 400, { ComboboxSize.x - 20 });
                 }
@@ -1134,8 +1197,7 @@ namespace EasyGUI_Direct2D
             Render_Rect(Block.Target, ComboboxPos.x, ComboboxPos.y, ComboboxSize.x, ComboboxSize.y, { 0,0,0 });
             Render_GradientRect(Block.Target, ComboboxPos.x + 1, ComboboxPos.y + 1, ComboboxSize.x - 2, ComboboxSize.y - 2, { 20,20,20 }, EasyGUI_Color / Animation<class EasyGUI_Combobox_DetMouAni>((DetectMousePos || IsOpen[Block.ID + Block.Line]) ? 6 : 7, EasyGUI_AnimationSmooth, Block.ID + Block.Line), true);
             Render_String(Block.Target, ComboboxPos.x + 10, 10000 + ComboboxPos.y + 13, SelectString, { 200,200,200 }, EasyGUI_Font, EasyGUI_FontSize, 400, { ComboboxSize.x - 35 });
-            if (IsOpen[Block.ID + Block.Line])Render_MiniString(Block.Target, ComboboxPos.x + 10 + ComboboxSize.x - 25, 10000 + Block.Line + 1, "▲", { 200,200,200 }, 9, 400);
-            else Render_MiniString(Block.Target, ComboboxPos.x + 10 + ComboboxSize.x - 25, 10000 + Block.Line + 1, "▼", { 200,200,200 }, 9, 400);
+            Render_MiniString(Block.Target, ComboboxPos.x + 10 + ComboboxSize.x - 25, 10000 + Block.Line + 1, IsOpen[Block.ID + Block.Line] ? "▲" : "▼", { 200,200,200 }, 9, 400);
             Block.Line += 25;
         }
         inline void GUI_List(EasyGUI_Block& Block, const vector<string>& LineString, int& m_InLine, int LimitLine = 0) noexcept//单选列表
@@ -1160,7 +1222,7 @@ namespace EasyGUI_Direct2D
                     if (InputState_IsWindShow && m_InLine != i && KeyEvent(VK_LBUTTON, true))m_InLine = i; SelectAlpha = 150;
                 }
                 const auto SelectAniAlpha = Animation<class EasyGUI_Combobox_SelectAni>(SelectAlpha, EasyGUI_AnimationSmooth, Block.ID + Block.Line + i);
-                Render_GradientRect(Block.Target, ListPos.x + 1, LineY, ListSize.x - 2, 20, EasyGUI_Color.Alpha(SelectAniAlpha) / 5, Vector4{ 20,20,20 }.Alpha(SelectAniAlpha), true);
+                Render_GradientRect(Block.Target, ListPos.x + 1, LineY, ListSize.x - 2, 20, EasyGUI_Color.Alpha(SelectAniAlpha / 10), EasyGUI_Color.Alpha(SelectAniAlpha / 50), true);
                 if (m_InLine == i)Render_String(Block.Target, ListPos.x + 12, 10000 + LineY + 10, LineString[i], EasyGUI_Color, EasyGUI_Font, EasyGUI_FontSize, 600);
                 else Render_String(Block.Target, ListPos.x + 12, 10000 + LineY + 10, LineString[i], { 200,200,200 }, EasyGUI_Font, EasyGUI_FontSize);
             }
