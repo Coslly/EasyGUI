@@ -1,4 +1,4 @@
-﻿#include "EasyGUI_Direct2D.h"
+#include "EasyGUI_Direct2D.h"
 int main()
 {
     ShowWindow(GetConsoleWindow(), true);//Show Console Window
@@ -36,7 +36,7 @@ int main()
             UI_Button = GUI_Variable.GUI_Button(Block, "Button");
             static auto ButtonClick = 0; if (UI_MiniButton || UI_Button)ButtonClick++;
             GUI_Variable.GUI_Text(Block, "Button hit: " + std::to_string(ButtonClick));
-            GUI_Variable.GUI_ColorSelector(Block, UI_ColorSelector);
+            GUI_Variable.GUI_ColorSelector4(Block, UI_ColorSelector);
             GUI_Variable.Style_SetColor(UI_ColorSelector);
             GUI_Variable.Window_SetAlpha(UI_ColorSelector.a);
             GUI_Variable.GUI_Text(Block, "Main color");
