@@ -23,33 +23,37 @@ int main()
         GUI_Variable.GUI_RadioBlock(30, 30, 100, 300, "Panel", { "Panel 1","Panel 2","Panel 3" }, UI_RadioBlock);
         if (UI_RadioBlock == 0)//Panel 1 Paint
         {
-            static EasyGUI_Direct2D::EasyGUI_Block Block;
-            GUI_Variable.GUI_Block(Block, 160, 30, 600, 300, "Block");//Block
-            GUI_Variable.GUI_Tip(Block, "Some tips");
-            GUI_Variable.GUI_KeySelector(Block, UI_KeySelector);
-            GUI_Variable.GUI_Checkbox(Block, "This is a Checkbox", UI_Checkbox);
-            if (UI_Checkbox)for (int i = 0; i <= 20; ++i)GUI_Variable.GUI_Text(Block, "This is Text " + std::to_string(i));
-            GUI_Variable.GUI_Slider<int>(Block, "Slider int", 0, 10, UI_Slider_int);
-            GUI_Variable.GUI_Slider<float>(Block, "Slider float", 0, 10, UI_Slider_float);
-            GUI_Variable.GUI_Combobox(Block, { "Head","CSGO","Dick","Coke","Shoot","Combo" }, UI_Combobox);
-            UI_MiniButton = GUI_Variable.GUI_MiniButton(Block);
-            UI_Button = GUI_Variable.GUI_Button(Block, "Button");
-            static auto ButtonClick = 0; if (UI_MiniButton || UI_Button)ButtonClick++;
-            GUI_Variable.GUI_Text(Block, "Button hit: " + std::to_string(ButtonClick));
-            GUI_Variable.GUI_ColorSelector4(Block, UI_ColorSelector);
-            GUI_Variable.Style_SetColor(UI_ColorSelector);
-            GUI_Variable.Window_SetAlpha(UI_ColorSelector.a);
-            GUI_Variable.GUI_Text(Block, "Main color");
-            GUI_Variable.GUI_PosSelector(Block, UI_PosSelector);
-            GUI_Variable.GUI_Text(Block, "Pos selector");
-            GUI_Variable.GUI_Text(Block, "Window FPS: " + std::to_string(GUI_Variable.Window_DrawFPS()));
+            static EasyGUI_Direct2D::EasyGUI_Block Block{};
+            if (GUI_Variable.GUI_Block(Block, 160, 30, 600, 300, "Block"))//Block
+            {
+                GUI_Variable.GUI_Tip(Block, "Some tips");
+                GUI_Variable.GUI_KeySelector(Block, UI_KeySelector);
+                GUI_Variable.GUI_Checkbox(Block, "This is a Checkbox", UI_Checkbox);
+                if (UI_Checkbox)for (int i = 0; i <= 20; ++i)GUI_Variable.GUI_Text(Block, "This is Text " + std::to_string(i));
+                GUI_Variable.GUI_Slider<int>(Block, "Slider int", 0, 10, UI_Slider_int);
+                GUI_Variable.GUI_Slider<float>(Block, "Slider float", 0, 10, UI_Slider_float);
+                GUI_Variable.GUI_Combobox(Block, { "Head","CSGO","Dick","Coke","Shoot","Combo" }, UI_Combobox);
+                UI_MiniButton = GUI_Variable.GUI_MiniButton(Block);
+                UI_Button = GUI_Variable.GUI_Button(Block, "Button");
+                static auto ButtonClick = 0; if (UI_MiniButton || UI_Button)ButtonClick++;
+                GUI_Variable.GUI_Text(Block, "Button hit: " + std::to_string(ButtonClick));
+                GUI_Variable.GUI_ColorSelector4(Block, UI_ColorSelector);
+                GUI_Variable.Style_SetColor(UI_ColorSelector);
+                GUI_Variable.Window_SetAlpha(UI_ColorSelector.a);
+                GUI_Variable.GUI_Text(Block, "Main color");
+                GUI_Variable.GUI_PosSelector(Block, UI_PosSelector);
+                GUI_Variable.GUI_Text(Block, "Pos selector");
+                GUI_Variable.GUI_Text(Block, "Window FPS: " + std::to_string(GUI_Variable.Window_DrawFPS()));
+            }
         }
         else if (UI_RadioBlock == 1)//Panel 2 Paint
         {
-            static EasyGUI_Direct2D::EasyGUI_Block Block;
-            GUI_Variable.GUI_Block(Block, 160, 30, 600, 300, "Block");//Block
-            GUI_Variable.GUI_InputText(Block, UI_InputText);
-            GUI_Variable.GUI_List(Block, { "Hello","C++","Java","CS","Windows","Hello","C++","Java","CS","Windows" }, UI_List, 5);
+            static EasyGUI_Direct2D::EasyGUI_Block Block{};
+            if (GUI_Variable.GUI_Block(Block, 160, 30, 600, 300, "Block"))//Block
+            {
+                GUI_Variable.GUI_InputText(Block, UI_InputText);
+                GUI_Variable.GUI_List(Block, { "Hello","C++","Java","CS","Windows","Hello","C++","Java","CS","Windows" }, UI_List, 5);
+            }
         }
         GUI_Variable.Draw(1);//End draw
     }
