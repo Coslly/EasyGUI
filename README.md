@@ -42,12 +42,12 @@ while (true)
 
     GUI_Variable.GUI_BackGround();//BackGround
 
-    static EasyGUI_Direct2D::EasyGUI_Block Block;
-    GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block");//Block
-
+    static EasyGUI_Direct2D::EasyGUI_Block Block{};
+    if (GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block"))//Block
+    {
     GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
     UI_Button = GUI_Variable.GUI_Button(Block, "Button");
-
+    }
     GUI_Variable.Draw(1);//End Draw GUI
 
     Sleep(1);
@@ -68,11 +68,12 @@ int main()
 
         GUI_Variable.GUI_BackGround();//BackGround
 
-        static EasyGUI_Direct2D::EasyGUI_Block Block;
-        GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block");//Block
+        static EasyGUI_Direct2D::EasyGUI_Block Block{};
+        if (GUI_Variable.GUI_Block(Block, 30, 30, 400, 200, "Test Block"))//Block
+        {
         GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
         UI_Button = GUI_Variable.GUI_Button(Block, "Button");
-
+        }
         GUI_Variable.Draw(1);//End Draw GUI
         //Sleep(1);//Do not need this
     }
