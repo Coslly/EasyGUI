@@ -1,9 +1,9 @@
 #include "EasyGUI_Direct2D.h"
 int main()
 {
-    ShowWindow(GetConsoleWindow(), true);//Show Console Window
-    system("cls"); printf("EasyGUI - Direct2D\nA lightweight and high-performance GUI library based on Direct2D\nGithub: https://github.com/Coslly/EasyGUI.git\n");
-    EasyGUI_Direct2D::EasyGUI GUI_Variable = { "EasyGUI - Direct2D",{790, 360} };//Initialize GUI variables
+    ShowWindow(GetConsoleWindow(), true);//Show console window
+    system("cls"); printf("EasyGUI - Direct2D\nA lightweight and high-performance GUI library based on Direct2D\nGithub: https://github.com/Coslly/EasyGUI\n");
+    EasyGUI_Direct2D::EasyGUI GUI_Variable = { "EasyGUI - Direct2D",{790, 360} };//Initialize GUI
     while (true)
     {
         static bool UI_Checkbox = false;
@@ -19,12 +19,12 @@ int main()
         static std::string UI_InputText = "Input text";
         static int UI_List = 0;
         GUI_Variable.Draw(0);//Begin draw
-        GUI_Variable.GUI_BackGround();//BackGround
-        GUI_Variable.GUI_RadioBlock(30, 30, 100, 300, "Panel", { "Panel 1","Panel 2","Panel 3" }, UI_RadioBlock);
-        if (UI_RadioBlock == 0)//Panel 1 Paint
+        GUI_Variable.GUI_BackGround();//Background
+        GUI_Variable.GUI_RadioBlock(30, 30, 100, 300, "Page", { "Page 1","Page 2","Page 3" }, UI_RadioBlock);
+        if (UI_RadioBlock == 0)
         {
             static EasyGUI_Direct2D::EasyGUI_Block Block{};
-            if (GUI_Variable.GUI_Block(Block, 160, 30, 600, 300, "Block"))//Block
+            if (GUI_Variable.GUI_Block(Block, 160, 30, 600, 300, "Block"))
             {
                 GUI_Variable.GUI_Tip(Block, "Some tips");
                 GUI_Variable.GUI_KeySelector(Block, UI_KeySelector);
@@ -46,10 +46,10 @@ int main()
                 GUI_Variable.GUI_Text(Block, "Window FPS: " + std::to_string(GUI_Variable.Window_DrawFPS()));
             }
         }
-        else if (UI_RadioBlock == 1)//Panel 2 Paint
+        else if (UI_RadioBlock == 1)
         {
             static EasyGUI_Direct2D::EasyGUI_Block Block{};
-            if (GUI_Variable.GUI_Block(Block, 160, 30, 600, 300, "Block"))//Block
+            if (GUI_Variable.GUI_Block(Block, 160, 30, 600, 300, "Block"))
             {
                 GUI_Variable.GUI_InputText(Block, UI_InputText);
                 GUI_Variable.GUI_List(Block, { "Hello","C++","Java","CS","Windows","Hello","C++","Java","CS","Windows" }, UI_List, 5);
