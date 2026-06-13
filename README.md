@@ -7,16 +7,23 @@
 <a href = "https://github.com/Coslly/EasyGUI/blob/main/EasyGUI/EasyGUI/EasyGUI_Direct2D.h"><img src = "https://img.shields.io/badge/EasyGUI.h-white?logo=github&label=Core"></a>
 
 A lightweight and high-performance GUI library based on Direct2D
+
+Empower C++ beginners to build their own menus in no time.
 ## 😀Features
-- For people(beginner,student)
-- C++ worker
-- Fast
-- Simple
-- Safety
+- For C++ worker
+- Fast - Simple - Safety - Light
 - Style can be easily modified
+## 👾Technical highlights
+Some technical problems I encountered and their solutions during the development of EasyGUI
+
+*I believe there are always better ways to optimize this. If you have any ideas, inspirations, or improvements, feel free to open an Issue or start a discussion in the EasyGUI repository! - Coslly*
+| Skill | Explanation / Description | Complexity |
+| --- | --- | --- |
+| [Block refresh delay](https://github.com/Coslly/EasyGUI/blob/main/Docs/TechnicalSkill1.md) | Introduce a throttled/debounced redraw delay for each block to improve rendering performance without compromising user experience. | ★★★☆☆ |
+| [Memory resource management](https://github.com/Coslly/EasyGUI/blob/main/Docs/TechnicalSkill2.md) | Optimize memory usage and performance through hash-based data structures and periodic garbage collection/resource release. | ★★★★☆ |
 ## 🥰Showcase (Example)
-![image](https://github.com/Coslly/EasyGUI/blob/main/Show/ShowCase.png?raw=true)
-![image](https://github.com/Coslly/EasyGUI/blob/main/Show/ShowCase.gif?raw=true)
+![image](https://github.com/Coslly/EasyGUI/blob/main/Docs/Image/ShowCase.png?raw=true)
+![image](https://github.com/Coslly/EasyGUI/blob/main/Docs/Image/ShowCase.gif?raw=true)
 ## 😧How to use it?
 ### - Constitute
 EasyGUI is a fast and lightweight GUI library written in C++. The core drawing library is used for original Direct2D (fast and lightweight) and is composed of the most basic key judgment system. Therefore the performance loss is negligible. Lightweight enough that a single header file is all you need to build a GUI.
@@ -81,4 +88,4 @@ int main()
 ```
 ### - Finished Product
 
-![image](https://github.com/Coslly/EasyGUI/blob/main/Show/OverallCode.png?raw=true)
+![image](https://github.com/Coslly/EasyGUI/blob/main/Docs/Image/OverallCode.png?raw=true)
