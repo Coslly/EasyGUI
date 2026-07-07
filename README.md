@@ -9,6 +9,10 @@
 A lightweight and high-performance GUI library based on Direct2D
 
 Empower C++ beginners to build their own menus in no time.
+
+一个基于 Direct2D 的轻量级高性能 GUI 库
+
+让 C++ 初学者能够快速构建自己的菜单。
 ## 😀Features
 - For C++ worker
 - Fast - Simple - Safety - Light
