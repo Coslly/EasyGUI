@@ -20,11 +20,11 @@ int main()
     {
         GUI_Variable.Draw(0);
         GUI_Variable.GUI_BackGround();
-        GUI_Variable.GUI_RadioBlock(30, 30, 100, 380, "EasyGUI", { "Page 1","Page 2","Page 3" }, TestVariable::UI_Page);
+        GUI_Variable.GUI_RadioBlock("EasyGUI", 30, 30, 100, 380, { "Page 1","Page 2","Page 3" }, TestVariable::UI_Page);
         if (TestVariable::UI_Page == 0)
         {
             static EasyGUI_Direct2D::EasyGUI_Block Block{};
-            if (GUI_Variable.GUI_Block(Block, 150, 30, 500, 380, "Block"))
+            if (GUI_Variable.GUI_Block(Block, "Block", 150, 30, 500, 380))
             {
                 GUI_Variable.GUI_Tip(Block, "Customize menu theme colors.");
                 GUI_Variable.GUI_ColorSelector3(Block, TestVariable::UI_ColorSelector);
@@ -37,7 +37,7 @@ int main()
                 GUI_Variable.Style_SetColorHue(TestVariable::UI_MenuVibrancy / 100.f, TestVariable::UI_MenuBrightness / 100.f);
                 GUI_Variable.GUI_Slider<int>(Block, "Menu font size", 0, 20, TestVariable::UI_MenuFontSize, "px");
                 GUI_Variable.Style_SetFontSize(TestVariable::UI_MenuFontSize);
-                GUI_Variable.GUI_InputText(Block, TestVariable::UI_CustomFont, "Custom menu font");
+                GUI_Variable.GUI_InputText(Block, "Custom menu font", TestVariable::UI_CustomFont);
                 GUI_Variable.Style_SetFont(TestVariable::UI_CustomFont);
                 GUI_Variable.GUI_List(Block, { "English", "中文", "한국어", "日本語", "Русский", "Español", "Français", "Deutsch", "Português", "العربية" }, TestVariable::UI_LanguageTestList, 5);
                 if (GUI_Variable.GUI_Button(Block, "Close"))exit(0);
