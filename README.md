@@ -16,6 +16,7 @@ Empower C++ beginners to build their own menus in no time.
 ## 😀Features
 - For C++ worker
 - Fast - Simple - Safety - Light
+- Header-Only Library
 - Style can be easily modified
 ## 👾Technical highlights
 Some technical problems I encountered and their solutions during the development of EasyGUI
