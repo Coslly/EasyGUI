@@ -4,7 +4,7 @@
 <a href="https://visualstudio.microsoft.com/"><img src="https://img.shields.io/badge/Visual%20Studio-2022%20&%202026-5C2D91?style=flat&logo=visualstudio&logoColor=white"></a>
 <a href = "https://en.wikipedia.org/wiki/Direct2D"><img src = "https://img.shields.io/badge/Direct2D-purple?style=flat&label=Render"></a>
 <a href = "https://github.com/Coslly/EasyGUI.git"><img src = "https://img.shields.io/badge/Proto-orange?style=flat&label=Version"></a>
-<a href = "https://github.com/Coslly/EasyGUI/blob/main/EasyGUI/EasyGUI/EasyGUI_Direct2D.h"><img src = "https://img.shields.io/badge/EasyGUI.h-white?logo=github&label=Core"></a>
+<a href = "https://github.com/Coslly/EasyGUI/blob/main/EasyGUI/EasyGUI/EasyGUI.h"><img src = "https://img.shields.io/badge/EasyGUI.h-white?logo=github&label=Core"></a>
 
 A lightweight and high-performance GUI library based on Direct2D
 
@@ -32,7 +32,7 @@ Some technical problems I encountered and their solutions during the development
 ### - Constitute
 EasyGUI is a fast and lightweight GUI library written in C++. The core drawing library is used for original Direct2D (fast and lightweight) and is composed of the most basic key judgment system. Therefore the performance loss is negligible. Lightweight enough that a single header file is all you need to build a GUI.
 
-Core file: `EasyGUI_Direct2D.h`
+Core file: `EasyGUI.h`
 
 Example file: `Main.cpp`
 ### - Initialization
