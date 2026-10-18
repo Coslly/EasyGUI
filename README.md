@@ -38,7 +38,7 @@ Example file: `Main.cpp`
 ### - Initialization
 ```cpp
 //Initialize EasyGUI
-EasyGUI_Direct2D::EasyGUI GUI_Variable("EasyGUI Test Windows", {590, 360});
+EasyGUI::EasyGUI GUI_Variable("EasyGUI Windows", { 100,100 }, { 590,360 });
 ```
 ### - Add controls
 You need to add a control block.
@@ -53,7 +53,7 @@ while (true)
 
     GUI_Variable.GUI_BackGround();//BackGround
 
-    static EasyGUI_Direct2D::EasyGUI_Block Block{};
+    static EasyGUI::EasyGUI_Block Block{};
     if (GUI_Variable.GUI_Block(Block, "Test Block", 30, 30, 400, 200))//Block
     {
         GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
@@ -68,25 +68,22 @@ while (true)
 ```cpp
 int main()
 {
-    EasyGUI_Direct2D::EasyGUI GUI_Variable("EasyGUI Test Windows", {500, 300});
+    EasyGUI::EasyGUI GUI_Variable("EasyGUI Test Windows", { 100,100 }, { 500,300 });
 
-    //Variable
     static bool UI_Checkbox = false;
     static bool UI_Button = false;
+
     while (true)
     {
         GUI_Variable.Draw(0);//Begin Draw GUI
-
         GUI_Variable.GUI_BackGround();//BackGround
-
-        static EasyGUI_Direct2D::EasyGUI_Block Block{};
+        static EasyGUI::EasyGUI_Block Block{};
         if (GUI_Variable.GUI_Block(Block, "Test Block", 30, 30, 400, 200))//Block
         {
             GUI_Variable.GUI_Checkbox(Block, "Checkbox", UI_Checkbox);
             UI_Button = GUI_Variable.GUI_Button(Block, "Button");
         }
         GUI_Variable.Draw(1);//End Draw GUI
-        //Sleep(1);//Do not need this
     }
 }
 ```
