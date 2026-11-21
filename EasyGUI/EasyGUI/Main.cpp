@@ -3,7 +3,7 @@ namespace TestVariable
 {
     int UI_Page = 0;
     bool UI_CustomMainColor = true;
-    EasyGUI::Vector::Vector4 UI_ColorSelector = { 255,255,255 };
+    EasyGUI::Vector::Vector4 UI_ColorSelector = { 1.f,1.f,1.f };
     float UI_MenuAnimationSmooth = 5;
     int UI_MenuFontSize = 0;
     std::string UI_CustomFont = "";
@@ -25,9 +25,9 @@ int main()
             if (GUI_Variable.GUI_Block(Block, "Block", 150, 30, 500, 380))
             {
                 GUI_Variable.GUI_Tip(Block, "Customize menu theme colors.");
-                GUI_Variable.GUI_ColorSelector3(Block, TestVariable::UI_ColorSelector);
+                GUI_Variable.GUI_ColorSelector_3(Block, TestVariable::UI_ColorSelector);
                 GUI_Variable.GUI_Checkbox(Block, "Custom main color", TestVariable::UI_CustomMainColor);
-                GUI_Variable.Style_SetColor(TestVariable::UI_CustomMainColor ? TestVariable::UI_ColorSelector : EasyGUI::Vector::Vector4{ 255,255,255 });
+                GUI_Variable.Style_SetColor(TestVariable::UI_CustomMainColor ? TestVariable::UI_ColorSelector : EasyGUI::Vector::Vector4{ 1.f,1.f,1.f });
                 GUI_Variable.GUI_Slider<float>(Block, "Menu animation smooth", 0, 20, TestVariable::UI_MenuAnimationSmooth);
                 GUI_Variable.Style_SetAnimationSmooth(TestVariable::UI_MenuAnimationSmooth);
                 GUI_Variable.GUI_Slider<int>(Block, "Menu font size", 0, 20, TestVariable::UI_MenuFontSize, "px");
